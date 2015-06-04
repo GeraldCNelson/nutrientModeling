@@ -6,12 +6,12 @@ row.names(FAO.Countries) <- seq(nrow(FAO.Countries))
 
 test<-FoodBalanceSheets_E_All_Data[!duplicated(FoodBalanceSheets_E_All_Data$Item),]
 FAO.Items<- test[,c("Item","ItemCode","Unit")]
-row.names(FAO.Items) <- seq(nrow(FAO.Items))
+row.names(FAO.Items) <- seq(nrow(FAO.Items)) 
 
 
 test<-FoodBalanceSheets_E_All_Data[!duplicated(FoodBalanceSheets_E_All_Data$Element),]
 FAO.Elements <- test[,c("Element","ElementGroup","ElementCode")]
-row.names(FAO.Elements) <- seq(nrow(FAO.Elements))
+row.names(FAO.Elements) <- seq(nrow(FAO.Elements)) 
 
 
 FAO.Unit <- unique(FoodBalanceSheets_E_All_Data$Unit) 
