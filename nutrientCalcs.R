@@ -1,49 +1,82 @@
-library(openxlsx) #written in C so doesn't need java; currently the library of choice
+# Intro -------------------------------------------------------------------
+#This script reads in IMPACT data and the nutrient lookup table, does some manipulations of the data,
+#and writes out results to an excel spreadsheet
+
+#Copyright (C) 2015 Gerald C. Nelson
+
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+# 
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details at http://www.gnu.org/licenses/.
+library(openxlsx) 
 library(entropy)
 library(dplyr)
 library(reshape2)
-setwd("~/Documents/workspace/nutrient-modeling")
-#Info for the basic info worksheet
+setwd("~/Documents/workspace/nutrientModeling")
+
+# Info for the basic info worksheet ---------------------------------------
 userName <- "Gerald Nelson"
 dataSource <- "URL here"
 dateDownloaded <- "Date here"
-#file names and locations
-NFileName <- "data/GFS nutrient matrix production & supply IMPACT coded.xlsx"
+dateCreated <- Sys.time()
+
+# File names, related info and locations -----------------------------------
+NFileName <- "data/GFS nutrient matrix production & supply IMPACT codedV2.xlsx"
 IMPACTfileName <- "data/DemandPerCapJan2015Results.xlsx"
 climData <- ".NoCC.MidGDPMidPop." #used to construct output file name
 IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.xlsx"
 IMPACTpricesFileName <- "data/IMPACTPricesJan2015.xlsx"
-  
-
-## set up things
-## categories of commodities
-staples <- c("cereal", "roots and tubers")
-cereals <- c("cereal")
-roots <- c("roots and tubers")
-eggs <- c("eggs")
-fruits <- c("fruit") 
-meats <- c("meat")
-beverages <- c("beverage")
-oilSeeds <- c("oil seed")
-vegetables <-c("vegetable")
-vegeOil <-c("vegetable oil")
-all <- c("cereal", "roots and tubers", "fruit", "meat","beverage","eggs","oil seed","vegetable","vegetable oil")
+commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.xlsx"
+IMPACTfoodCommodities <- c("cbeef","cpork","clamb","cpoul","ceggs","cmilk","cbarl","cmaiz",
+"cmill","crice","csorg","cwhea","cocer","ccass","cpota","cswpt","cyams","corat","cbean","cchkp",
+"ccowp","clent","cpigp","copul","cbana","cplnt","csubf","ctemf","cvege","csugr","cgrnd","cgdol",
+"crpsd","crpol","csoyb","csbol","csnfl","csfol","cplol","cpkol","ctols","ctool","ccoco","ccafe",
+"cteas","cothr")
 daysInYear <- 365 #see http://stackoverflow.com/questions/9465817/count-days-per-year for a way to deal with leap years
-#commodities that are not food items that need to be removed
-notFood <- c("ccott","cfodr","cgrss","cothr","cpalm")
+
+# Food groups and commodities ---------------------------------------------
+# This set of 13 food groups will be reviewed at a workshop in late June 2015 for possible revision.
+# Note: staples is not a food group per se but included here because it is used in one of the diversity metrics
+staples <- c("cereals", "roots and tubers")
+beverages <- c("beverages")
+cereals <- c("cereals")
+dairy <- c("dairy")
+eggs <- c("eggs")
+fish <- c("fish")
+fruits <- c("fruits") 
+meats <- c("meats")
+oils <-c("fats and oils")
+oilSeeds <- c("oil seeds")
+pulses <- c("pulses")
+roots <- c("roots and tubers")
+sweeteners <- c("sugar and sweeteners")
+vegetables <-c("vegetables")
+
+allFoodGroups <- c("beverages", "cereals", "dairy", "eggs", "fish", "fruits", "meats", "fats and oils", 
+               "oil seeds", "pulses", "roots and tubers", "sugar and sweeteners", "vegetables")
+
 ##operations on the nutrients file
-nutNames <- c("ENERGY","PROT","FAT","CARBO","FIBR","CALC","PHOS","MGNS","POTS","SODM","IRON","ZINC","COPR","MNGN","VITA","VITD","VITE","VITC","THIAM","RIBF","NIAC","VITB6","FOLC","VITB12","PANTO")
+
+# nutrient lookup table readin and cleanup --------------------------------
+nutNames <- c("ENERGY","PROT","FAT","CARBO","FIBR","CALC","PHOS","MGNS","POTS","SODM","IRON",
+              "ZINC","COPR","MNGN","VITA","VITD","VITE","VITC","THIAM","RIBF","NIAC","VITB6","FOLC",
+              "VITB12","PANTO")
 nutrients <- read.xlsx(NFileName, 
                        sheet = 1,
                        startRow = 3,
                        colNames = FALSE)
 
-colnames(nutrients) <- c("name","commodity","category","PlantPart","source", "conversion",
+colnames(nutrients) <- c("name","commodity","PlantPart","source", "conversion",
                          nutNames)
-#convert the NAs to 0 except in the first 6 columns which are text fields
-temp <- nutrients[,6:ncol(nutrients)]
+#convert the NAs to 0 except in the first 5 columns which are text fields
+temp <- nutrients[,5:ncol(nutrients)]
 temp[is.na(temp)] <- 0
-nutrients[is.na(nutrients)] <- 0
+#nutrients[is.na(nutrients)] <- 0
 nutrients[,6:ncol(nutrients)] <- temp
 # change nutrient unit from 100 gm to 1 kg
 nutrients[,nutNames] <- nutrients[,nutNames] * 10
@@ -61,6 +94,8 @@ t1 <- read.xlsx(IMPACTfileName,
 t1.income <- t1[,c("impactparameter","scenario","region","year","Val")]
 PcIncome.IMPACT <- subset(t1.income,(t1$impactparameter == "pcGDPXAgg -- Per Capita Income" ))
 PcIncome.IMPACT.wide <- dcast(PcIncome.IMPACT,scenario + region  ~ year, mean, value.var = "Val")
+#keep only food items
+temp <- t1[t1$commodity %in% IMPACTfoodCommodities, ]
 #remove the scenario column for now.
 PcIncome.IMPACT.wide[c("scenario")] <- list(NULL)
 
@@ -206,7 +241,7 @@ EARs <- EARs[, !names(EARs) %in%
 #test function inputs
 # rgn <- ctyNames[2]
 # yr <- yrs[1]
-# cat <- "all"
+# cat <- "allFoodGroups"
 
 f.regionCmdty <- function(rgn)
 {
@@ -281,7 +316,7 @@ sheetNameDesc <- ("Description of sheet contents")
 #create a worksheet with info on creator, date, model version, etc.
 creationInfo <- ("Information on creator, date, model version, etc.")
 creationInfo <- rbind(creationInfo, paste("Creator:", userName))
-creationInfo <- rbind(creationInfo, paste("Date of file creation:", Sys.time()))
+creationInfo <- rbind(creationInfo, paste("Date of file creation:", dateCreated))
 
 addWorksheet(wb, sheetName="creationInfo")
 writeData(wb, creationInfo, sheet="creationInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
@@ -334,7 +369,7 @@ sheetNameList <- rbind(sheetNameList,paste(rgn,"pcCons"))
 sheetNameDesc <- rbind(sheetNameDesc,"daily per capita consumption of IMPACT commodities (kgs)")
 
 #loop over all the categories; creating a matrix for each and then writing to the worksheet
-catList <- c("all","staples", "cereals", "roots", "fruits", "meats","beverages","eggs","oilSeeds","vegetables","vegeOil")
+catList <- c("allFoodGroups","staples", "cereals", "roots", "fruits", "meats","beverages","eggs","oilSeeds","vegetables","vegeOil")
 for (cat in catList ) {
   #first calulate the total for each nutrient for each category 
   for (yrCntr in 1:length(yrs)) {
@@ -343,7 +378,7 @@ for (cat in catList ) {
   }
   row.names(mat)<-nutNames
   colnames(mat)<-yrs
-  if(cat=="all"){
+  if(cat=="allFoodGroups"){
     mat.all <- mat
   }
   tempSheetName<- paste(rgn,cat,sep=".")
