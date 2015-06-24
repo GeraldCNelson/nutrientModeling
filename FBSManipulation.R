@@ -3,7 +3,7 @@
 #This script reads in the FAO Food Balance Sheet information, does some manipulations of the data,
 #and writes out results to an excel spreadsheet
 
-#Copyright (C) 2015 Gerald C. Nelson
+#Copyright (C) 2015 Gerald C. Nelson, except where noted
 
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -22,11 +22,12 @@ library(ggplot2)
 
 setwd("~/Documents/workspace/nutrientModeling")
 
-# Info for the basic info worksheet ---------------------------------------
+# Info for the basic worksheet ---------------------------------------
 
 userName <- "Gerald Nelson"
 dataSource <- "http://faostat3.fao.org/download/FB/FBS/E"
 dateDownloaded <- "8 June 2015"
+dateCreated <- Sys.time()
 #file names and locations
 ctyFileName <- "data/FBSData/FAOCountryNameCodeLookup.xlsx"
 #FBS data
