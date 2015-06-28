@@ -29,7 +29,7 @@ dateCreated <- Sys.time()
 NFileName <- "data/GFS nutrient matrix production & supply IMPACT codedV2.xlsx"
 IMPACTfileName <- "data/DemandPerCapJan2015Results.xlsx"
 climData <- ".NoCC.MidGDPMidPop." #used to construct output file name
-IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.xlsx"
+IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.csv" # this file includes Denmark plus and Sudan plus and remove Greenland and South Sudan
 IMPACTpricesFileName <- "data/IMPACTPricesJan2015.xlsx"
 EARFile <- "data/DRI EAR values.xlsx"
 commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.xlsx"
@@ -42,6 +42,7 @@ IMPACTfoodCommodities <- c("cbeef","cpork","clamb","cpoul","ceggs","cmilk","cbar
 
 #sort the list
 IMPACTfoodCommodities <- IMPACTfoodCommodities[sort.list(IMPACTfoodCommodities)]
+
 daysInYear <- 365 #see http://stackoverflow.com/questions/9465817/count-days-per-year for a way to deal with leap years
 
 # Read in and clean up files ----------------------------------------------
@@ -131,7 +132,7 @@ i <- sapply(commods, is.factor)
 commods[i] <- lapply(commods[i], as.character)
 
 #get the list of all the commodity names used in this IMPACT output
-cropNames <- as.data.frame(sort(unique(commods$commodity)))
+cropNames <- as.data.frame(sort(unique(commods$commodity)), stringsAsFactors = FALSE)
 colnames(cropNames) <- "commodity"
 
 # the next line checks to see if the commods list of commodities is the same as that in IMPACTfoodCommodities
@@ -157,9 +158,9 @@ worldPrices.wide <- dcast(worldPrices,commodity ~ year, mean, value.var = "Val")
 # Add X to year column names
 colnames(worldPrices.wide) <- make.names(colnames(worldPrices.wide))
 
-# metric, income share of food --------------------------------------------
+# metric: income share of food expenditures -------------------------------
 
-## calculate how much is spent per day on IMPACT commodities and its share of pc income, 
+## calculate how much is spent per day on IMPACT commodities (budget) and its share of per capita income (incomeShare), 
 ## currently using world prices
 budget <- data.frame(matrix(vector(), 0, ncol(worldPrices.wide), 
                             dimnames=NULL), stringsAsFactors=F)
@@ -172,32 +173,39 @@ colnames(incomeShare) <- c("region",colnames(worldPrices.wide[2:ncol(worldPrices
 for (j in 1:length(regions)) { #j is regions
   regionTmp <- subset(commods,(commods$region == regions[j] ))
   tmp <- merge(regionTmp,cropNames, by = "commodity", all=TRUE )
-  #remove the region column
+ 
+   #remove the region column because this tmp has just region j in it
   tmp[c("region")] <- list(NULL)
   
+  #convert NAs to 0 so the math works
   tmp[is.na(tmp)] <- 0
   budget[j,1]<- c(regions[j])
   incomeShare[j,1]<- c(regions[j])
   
-  for (i in 2:ncol(worldPrices.wide)) { # i is years
+  for (i in 3:ncol(worldPrices.wide)) { # i is years; starts at 3, col1 is scenario, col2 is region
     #commodities in tmp are in kg/person per year
-    budget[j,i] <- sum(tmp[,i] * worldPrices.wide[,i])/365/1000
+    budget[j,i-1] <- sum(tmp[,i-1] * worldPrices.wide[,i])/365/1000
     #PcIncome is in $1000/mt; convert to $1 and get average daily income
-    incomeShare[j,i] <- budget[j,i] / ((PcIncome.IMPACT.wide[j,i] * 1000)/365)
+    incomeShare[j,i-1] <- budget[j,i-1] / ((PcIncome.IMPACT.wide[j,i] * 1000)/365)
     
   }
 }
-write.csv(budget, file = "results/budget.csv")
-write.csv(incomeShare, file = "results/incomeShare.csv")
+
+budgetfileName <- paste("results/","budget",Sys.time(),sep="")
+incomeSharefileName <- paste("results/","incomeShare",Sys.time(),sep="")
+write.csv(budget, file = budgetfileName)
+write.csv(incomeShare, file = incomeSharefileName)
+
+# metric: Share of EAR consumed for the nutrients in nutNames -------------
 
 IMPACTregions <- read.xlsx(IMPACTregionsFileName, colNames = TRUE, sheet = 1)
 ctyNames  <- IMPACTregions$CTY
 yrs <- colnames(commods)[-(1:2)] #list of the column names for the years of data
 
-# #Read in the RDAs data
-RDAFile <- "RDAs.xlsx"
-RDAs <- read.xlsx(RDAFile, colNames = TRUE,sheet = 1, startRow = 1)
-RDAs <- RDAs[,2:4]
+# # #Read in the RDA data
+# RDAFile <- "RDAs.xlsx"
+# RDAs <- read.xlsx(RDAFile, colNames = TRUE,sheet = 1, startRow = 1)
+# RDAs <- RDAs[,2:4]
 
 #Read in the EARs data
 EARs <- read.xlsx(EARFile, sheet = 1, startRow = 3, colNames = FALSE)
@@ -210,10 +218,12 @@ colnames(EARs) <- c("nutrient","X0_0.5","X0.5_1","X1_3","X4_8",
                     "F9_13","F14_18","F19_30","F_31_50","F51_70","F70Plus",
                     "P14_18","P19_30","P31_50","L14_18","L19_30","L31_50")
 #add columns to line up with the SSP pop data distribution from IIASA
+
 #children
 EARs$SSPX0_4 <- (EARs$X0_0.5 + EARs$X0.5_1 + EARs$X1_3)/3
 EARs$SSPX5_9 <- (EARs$X4_8)
 EARs$SSPX10_14 <- (EARs$X9_13)
+
 #males
 EARs$SSPM15_19 <- (EARs$X14_18)
 EARs$SSPM20_24 <- (EARs$M19_30)
@@ -233,6 +243,7 @@ EARs$SSPM85_89 <- (EARs$M70Plus)
 EARs$SSPM90_94 <- (EARs$M70Plus)
 EARs$SSPM95_99 <- (EARs$M70Plus)
 EARs$SSPM100Plus <- (EARs$M70Plus)
+
 #females
 EARs$SSPF20_24 <- (EARs$F19_30)
 EARs$SSPF25_29 <- (EARs$F19_30)
@@ -257,9 +268,6 @@ EARs <- EARs[, !names(EARs) %in%
                c("X0_0.5","X0.5_1","X1_3","X4_8",
                  "M9_13","M14_18","M19_30","M_31_50","M51_70","M70Plus",
                  "F9_13","F14_18","F19_30","F_31_50","F51_70","F70Plus")]
-
-
-
 
 #test function inputs
 # rgn <- ctyNames[2]
@@ -425,33 +433,33 @@ for (cat in catList ) {
   addStyle(wb, sheet=tempSheetName, style=shareStyle, rows = 2:(nrow(mat)+1), cols=2:(ncol(mat)+1), gridExpand = TRUE)
   assign(tempSheetName,mat)
 }
-#calculate the share of RDAs being met by the nutrient intakes
+#calculate the share of EARs being met by the nutrient intakes
 #nutrientNames <- read.xlsx(nutrientNamesFile, colNames = TRUE, sheet = 1)
 
 tempMat.all<- as.data.frame(mat.all)
 tempMat.all$code <- row.names(tempMat.all)
-tempMat.all<- merge (tempMat.all,RDAs, by = "code")
-RDAMen <- data.frame(matrix(0, ncol = ncol(tempMat.all)-2, nrow = nrow(tempMat.all)))
-colnames(RDAMen)<- colnames(tempMat.all[1:47])
-RDAMen[1] <- tempMat.all[1]
-RDAWomen <- RDAMen
+tempMat.all<- merge (tempMat.all,EARs, by = "code")
+EARMen <- data.frame(matrix(0, ncol = ncol(tempMat.all)-2, nrow = nrow(tempMat.all)))
+colnames(EARMen)<- colnames(tempMat.all[1:47])
+EARMen[1] <- tempMat.all[1]
+EARWomen <- EARMen
 for (i in 1:length(colnames(tempMat.all[1:46]))) {
   tempColName <- colnames(tempMat.all[i+1])
-  RDAMen[tempColName] <- tempMat.all[tempColName]/tempMat.all$male_31_50
-  RDAWomen[tempColName] <- tempMat.all[tempColName]/tempMat.all$female_31_50
+  EARMen[tempColName] <- tempMat.all[tempColName]/tempMat.all$male_31_50
+  EARWomen[tempColName] <- tempMat.all[tempColName]/tempMat.all$female_31_50
 }
-sheetNameList <- rbind(sheetNameList, paste(rgn,"RDAMen",sep = "."))
+sheetNameList <- rbind(sheetNameList, paste(rgn,"EARMen",sep = "."))
 sheetNameDesc <- rbind(sheetNameDesc, "share of recommended daily allowance for men, 31-50")
-sheetNameList <- rbind(sheetNameList, paste(rgn,"RDAWomen",sep = "."))
+sheetNameList <- rbind(sheetNameList, paste(rgn,"EARWomen",sep = "."))
 sheetNameDesc <- rbind(sheetNameDesc, "share of recommended daily allowance for women, 31-50")
-tempSheetName<- paste(rgn,"RDAMen",sep=".")
+tempSheetName<- paste(rgn,"EARMen",sep=".")
 addWorksheet(wb, sheetName=tempSheetName)
-writeData(wb, RDAMen, sheet=tempSheetName, startRow=1, startCol=1, rowNames = FALSE)
-addStyle(wb, sheet=tempSheetName, style=shareStyle, rows = 2:(nrow(RDAMen)+1), cols=2:(ncol(RDAMen)+1), gridExpand = TRUE)
-tempSheetName <- paste(rgn,"RDAWomen",sep=".")
+writeData(wb, EARMen, sheet=tempSheetName, startRow=1, startCol=1, rowNames = FALSE)
+addStyle(wb, sheet=tempSheetName, style=shareStyle, rows = 2:(nrow(EARMen)+1), cols=2:(ncol(EARMen)+1), gridExpand = TRUE)
+tempSheetName <- paste(rgn,"EARWomen",sep=".")
 addWorksheet(wb, sheetName=tempSheetName)
-writeData(wb, RDAWomen, sheet=tempSheetName, startRow=1, startCol=1, rowNames = FALSE)
-addStyle(wb, sheet=tempSheetName, style=shareStyle, rows = 2:(nrow(RDAWomen)+1), cols=2:(ncol(RDAWomen)+1), gridExpand = TRUE)
+writeData(wb, EARWomen, sheet=tempSheetName, startRow=1, startCol=1, rowNames = FALSE)
+addStyle(wb, sheet=tempSheetName, style=shareStyle, rows = 2:(nrow(EARWomen)+1), cols=2:(ncol(EARWomen)+1), gridExpand = TRUE)
 
 #-----------------------
 # calculate the Shannon Wiener diversity index (H)
@@ -488,7 +496,8 @@ worksheetOrder(wb) <- temp
 
 saveWorkbook(wb, NutfileName, overwrite = TRUE)
 
-#---------------------------
+# metric: MFAD ------------------------------------------------------------
+
 #calculate MFAD = (SUM(i to n) *SUM(j to n) * dij)/N
 #where dij is the nutritional dissimilarity between commodity i and j 
 #Euclidian distance is sqrt(sum((xi - xj) ^ 2))
