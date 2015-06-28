@@ -39,107 +39,125 @@ IMPACTfoodCommodities <- c("cbeef","cpork","clamb","cpoul","ceggs","cmilk","cbar
 "ccowp","clent","cpigp","copul","cbana","cplnt","csubf","ctemf","cvege","csugr","cgrnd","cgdol",
 "crpsd","crpol","csoyb","csbol","csnfl","csfol","cplol","cpkol","ctols","ctool","ccoco","ccafe",
 "cteas","cothr")
+
+#sort the list
+IMPACTfoodCommodities <- IMPACTfoodCommodities[sort.list(IMPACTfoodCommodities)]
 daysInYear <- 365 #see http://stackoverflow.com/questions/9465817/count-days-per-year for a way to deal with leap years
-
-# Food groups and commodities ---------------------------------------------
-# This set of 13 food groups will be reviewed at a workshop in late June 2015 for possible revision.
-# Note: staples is not a food group per se but included here because it is used in one of the diversity metrics
-staples <- c("cereals", "roots and tubers")
-beverages <- c("beverages")
-cereals <- c("cereals")
-dairy <- c("dairy")
-eggs <- c("eggs")
-fish <- c("fish")
-fruits <- c("fruits") 
-meats <- c("meats")
-oils <-c("fats and oils")
-oilSeeds <- c("oil seeds")
-pulses <- c("pulses")
-roots <- c("roots and tubers")
-sweeteners <- c("sugar and sweeteners")
-vegetables <-c("vegetables")
-
-allFoodGroups <- c("beverages", "cereals", "dairy", "eggs", "fish", "fruits", "meats", "fats and oils", 
-               "oil seeds", "pulses", "roots and tubers", "sugar and sweeteners", "vegetables")
-
 
 # Read in and clean up files ----------------------------------------------
 
+# Food groups and commodities ---------------------------------------------
+# This set of 13 food groups will be reviewed at a workshop in late June 2015 for possible revision.
+foodGroupsInfo <- read.xlsx(commodityFoodGroupLookupFileName, 
+                       sheet = 1,
+                       startRow = 1,
+                       colNames = TRUE)
+
+# Note: staples is not a food group per se but included here because it is used in one of the diversity metrics
+staples <- c("cereals", "roots")
+# This is the list of food group codes as of June 28, 2015
+# beverages <- c("beverages")
+# cereals <- c("cereals")
+# dairy <- c("dairy")
+# eggs <- c("eggs")
+# fish <- c("fish")
+# fruits <- c("fruits") 
+# meats <- c("meats")
+# oils <-c("fats and oils")
+# oilSeeds <- c("oil seeds")
+# pulses <- c("pulses")
+# roots <- c("roots and tubers")
+# sweeteners <- c("sugar and sweeteners")
+# vegetables <-c("vegetables")
+
+allFoodGroups <- unique(foodGroupsInfo$Food.group.codes)
+#get rid of the NA from the spreadsheet import
+allFoodGroups <- allFoodGroups[!is.na(allFoodGroups)]
+
 ## nutrient lookup table readin and cleanup -------------------------------
-nutNames <- c("ENERGY","PROT","FAT","CARBO","FIBR","CALC","PHOS","MGNS","POTS","SODM","IRON",
-              "ZINC","COPR","MNGN","VITA","VITD","VITE","VITC","THIAM","RIBF","NIAC","VITB6","FOLC",
-              "VITB12","PANTO")
+#nutNames <- c("ENERGY","PROT","FAT","CARBO","FIBR","CALC","PHOS","MGNS","POTS","SODM","IRON",
+#              "ZINC","COPR","MNGN","VITA","VITD","VITE","VITC","THIAM","RIBF","NIAC","VITB6","FOLC",
+#              "VITB12","PANTO") 
 nutrients <- read.xlsx(NFileName, 
                        sheet = 1,
-                       startRow = 3,
-                       colNames = FALSE)
+                       startRow = 2,
+                       colNames = TRUE)
+nutNames <- colnames(nutrients[,6:length(nutrients)])
 
-colnames(nutrients) <- c("name","commodity","PlantPart","source", "conversion",
-                         nutNames)
-#convert the NAs to 0 except in the first 5 columns which are text fields
+#convert the NAs to 0 except in the first 4 columns which are text fields
 temp <- nutrients[,5:ncol(nutrients)]
 temp[is.na(temp)] <- 0
-#nutrients[is.na(nutrients)] <- 0 [is this necessary?]
 nutrients[,5:ncol(nutrients)] <- temp
+
 # change nutrient unit from 100 gm to 1 kg
 nutrients[,nutNames] <- nutrients[,nutNames] * 10
+
 # convert to IMPACT unit equivalents (nutrients per carcass weight for meat)
 nutrients[,nutNames] <- 
   nutrients[,nutNames] * nutrients[,"conversion"]
 
-## IMPACT commodity assignment to food group file readin and cleanup ------
-fgLookup <- read.xlsx(commodityFoodGroupLookupFileName, 
-                sheet = 1,
-                startRow = 2,
-                colNames = FALSE)
-colnames(fgLookup) <- c("IMPACT_code","name","foodGroup","foodGroups")
 ## IMPACT commodity file readin and cleanup -------------------------------
 t1 <- read.xlsx(IMPACTfileName, 
                 sheet = 2,
-                startRow = 1,
-                colNames = TRUE)
-t1.income <- t1[,c("impactparameter","scenario","region","year","val")]
-PcIncome.IMPACT <- subset(t1.income,(t1$impactparameter == "pcGDPXAgg -- Per Capita Income" ))
-PcIncome.IMPACT.wide <- dcast(PcIncome.IMPACT,scenario + region  ~ year, mean, value.var = "val")
-#keep only food items
-temp <- t1[t1$commodity %in% IMPACTfoodCommodities, ]
-#remove the scenario column for now.
-PcIncome.IMPACT.wide[c("scenario")] <- list(NULL)
+                startRow = 2,
+                colNames = FALSE)
 
+colnames(t1) <- c("IMPACTparameter", "scenario", "commodity" , "region", "year", "value", "FoodAvailXAgg", "units")
+
+t1.income <- t1[,c("IMPACTparameter","scenario","region","year","value")]
+PcIncome.IMPACT <- subset(t1.income,(t1$IMPACTparameter == "pcGDPXAgg -- Per Capita Income" ))
+PcIncome.IMPACT.wide <- dcast(PcIncome.IMPACT,scenario + region  ~ year, mean, value.var = "value")
+
+#Column names can't begin with a number so this command prepends an X
 colnames(PcIncome.IMPACT.wide) <- make.names(colnames(PcIncome.IMPACT.wide))
 
-t1 <- t1[,c("impactparameter","scenario","commodity","region","year","val")] #get rid of extra columns
-t2 <- t1[-grep("-",t1$commodity),] #include only the rows with commodity codes; remove those that contain a '-'.
-t3 <- subset(t2,impactparameter == "FoodAvailXAgg") #include only the rows with commodity codes; remove those that contain a '-'.
+#keep only food items
+t1 <- t1[t1$commodity %in% IMPACTfoodCommodities, ]
+
+t1 <- t1[,c("IMPACTparameter","scenario","commodity","region","year","value")] #get rid of extra columns
+#t2 <- t1[-grep("-",t1$commodity),] #include only the rows with commodity codes; remove those that contain a '-'.
+
+#include only the rows with "FoodAvailXAgg" ; remove those that contain "QFXAgg -- Household Demand".
+t2 <- subset(t1,IMPACTparameter == "FoodAvailXAgg") 
+
 #create the table with columns for region, commodity, and years
-commods <- dcast(t3,region + commodity ~ year, mean, value.var = "val")
+commods <- dcast(t2,region + commodity ~ year, mean, value.var = "value")
+
 #add X in front of the year to make the column names syntactically correct
 colnames(commods) <- make.names(colnames(commods))
+
+#if any column in commods is a factor the next two lines convert it to character
 i <- sapply(commods, is.factor)
 commods[i] <- lapply(commods[i], as.character)
+
 #get the list of all the commodity names used in this IMPACT output
 cropNames <- as.data.frame(sort(unique(commods$commodity)))
 colnames(cropNames) <- "commodity"
 
+# the next line checks to see if the commods list of commodities is the same as that in IMPACTfoodCommodities
+identical(sort(unique(IMPACTfoodCommodities)), sort(unique(commods$commodity)))
+
 #cleanup
-rm(t1,t2,t3,PcIncome.IMPACT,t1.income)
+rm(i,t1,t2,PcIncome.IMPACT,t1.income)
 
 #Note to self: still need to aggregate to new regions for IMPACT
 regions <- sort(unique(commods$region))
 
-#operations on IMPACT prices file
+# Read in the IMPACT prices file
 worldPrices <- read.xlsx(IMPACTpricesFileName, 
                        sheet = 1,
                        startRow = 1,
                        colNames = TRUE)
-cropNames <- as.data.frame(sort(unique(worldPrices$commodity)))
-colnames(cropNames) <- "commodity"
 
-worldPrices.wide <- dcast(worldPrices,commodity ~ year, mean, value.var = "val")
+#keep only food items
+worldPrices <- worldPrices[worldPrices$commodity %in% IMPACTfoodCommodities, ]
+
+worldPrices.wide <- dcast(worldPrices,commodity ~ year, mean, value.var = "Val")
+
+# Add X to year column names
 colnames(worldPrices.wide) <- make.names(colnames(worldPrices.wide))
 
-
-# metric, income share to food --------------------------------------------
+# metric, income share of food --------------------------------------------
 
 ## calculate how much is spent per day on IMPACT commodities and its share of pc income, 
 ## currently using world prices
