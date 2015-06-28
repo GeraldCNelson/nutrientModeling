@@ -29,9 +29,9 @@ dateCreated <- Sys.time()
 NFileName <- "data/GFS nutrient matrix production & supply IMPACT codedV2.xlsx"
 IMPACTfileName <- "data/DemandPerCapJan2015Results.xlsx"
 climData <- ".NoCC.MidGDPMidPop." #used to construct output file name
-IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.csv" # this file includes Denmark plus and Sudan plus and remove Greenland and South Sudan
+IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.csv" # this file includes Denmark plus (DNP) and Sudan plus (SDP) and remove Greenland and South Sudan
 IMPACTpricesFileName <- "data/IMPACTPricesJan2015.xlsx"
-EARFile <- "data/DRI EAR values.xlsx"
+EARFile <- "data/DRI EAR valuesV2.xlsx"
 commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.xlsx"
 
 IMPACTfoodCommodities <- c("cbeef","cpork","clamb","cpoul","ceggs","cmilk","cbarl","cmaiz",
@@ -76,14 +76,14 @@ allFoodGroups <- unique(foodGroupsInfo$Food.group.codes)
 allFoodGroups <- allFoodGroups[!is.na(allFoodGroups)]
 
 ## nutrient lookup table readin and cleanup -------------------------------
-#nutNames <- c("ENERGY","PROT","FAT","CARBO","FIBR","CALC","PHOS","MGNS","POTS","SODM","IRON",
+#nutCodes <- c("ENERGY","PROT","FAT","CARBO","FIBR","CALC","PHOS","MGNS","POTS","SODM","IRON",
 #              "ZINC","COPR","MNGN","VITA","VITD","VITE","VITC","THIAM","RIBF","NIAC","VITB6","FOLC",
 #              "VITB12","PANTO") 
 nutrients <- read.xlsx(NFileName, 
                        sheet = 1,
                        startRow = 2,
                        colNames = TRUE)
-nutNames <- colnames(nutrients[,6:length(nutrients)])
+nutCodes <- colnames(nutrients[,6:length(nutrients)])
 
 #convert the NAs to 0 except in the first 4 columns which are text fields
 temp <- nutrients[,5:ncol(nutrients)]
@@ -91,11 +91,11 @@ temp[is.na(temp)] <- 0
 nutrients[,5:ncol(nutrients)] <- temp
 
 # change nutrient unit from 100 gm to 1 kg
-nutrients[,nutNames] <- nutrients[,nutNames] * 10
+nutrients[,nutCodes] <- nutrients[,nutCodes] * 10
 
 # convert to IMPACT unit equivalents (nutrients per carcass weight for meat)
-nutrients[,nutNames] <- 
-  nutrients[,nutNames] * nutrients[,"conversion"]
+nutrients[,nutCodes] <- 
+  nutrients[,nutCodes] * nutrients[,"conversion"]
 
 ## IMPACT commodity file readin and cleanup -------------------------------
 t1 <- read.xlsx(IMPACTfileName, 
@@ -196,9 +196,9 @@ incomeSharefileName <- paste("results/","incomeShare",Sys.time(),sep="")
 write.csv(budget, file = budgetfileName)
 write.csv(incomeShare, file = incomeSharefileName)
 
-# metric: Share of EAR consumed for the nutrients in nutNames -------------
+# metric: Share of EAR consumed for the nutrients in nutCodes -------------
 
-IMPACTregions <- read.xlsx(IMPACTregionsFileName, colNames = TRUE, sheet = 1)
+IMPACTregions <- read.csv(IMPACTregionsFileName)
 ctyNames  <- IMPACTregions$CTY
 yrs <- colnames(commods)[-(1:2)] #list of the column names for the years of data
 
@@ -209,11 +209,10 @@ yrs <- colnames(commods)[-(1:2)] #list of the column names for the years of data
 
 #Read in the EARs data
 EARs <- read.xlsx(EARFile, sheet = 1, startRow = 3, colNames = FALSE)
-EARs <- EARs[,-1]
 #make sure everything that should be numeric, is
-for (j in 2:length(EARs)) set(EARs,j=j,value=as.numeric(EARs[[j]]))
+for (j in 3:length(EARs)) (EARs[j] <- as.numeric(EARs[,j]))
 #give the columns some names
-colnames(EARs) <- c("nutrient","X0_0.5","X0.5_1","X1_3","X4_8",
+colnames(EARs) <- c("NutCode","nutNames.Units","X0_0.5","X0.5_1","X1_3","X4_8",
                     "M9_13","M14_18","M19_30","M_31_50","M51_70","M70Plus",
                     "F9_13","F14_18","F19_30","F_31_50","F51_70","F70Plus",
                     "P14_18","P19_30","P31_50","L14_18","L19_30","L31_50")
@@ -304,9 +303,9 @@ f.nutSum <-function(rgn,cat,yr) {
   # The if statement checks to see whether the rgn (AGR, USA, etc.) has values for the cat (staples, etc.) of commodities
   if ("TRUE" %in% (nutTempRgn$category %in% eval(parse(text = cat)))){
     #loop through all nutrients
-    for (nutCntr in 1:length(nutNames)) {
+    for (nutCntr in 1:length(nutCodes)) {
       # sum of nutrient per capita per day (assumes 365 days in year) from all commodities
-      nutSumTemp <- sum(nutTempRgn[,yr] * nutTempRgn[nutNames[nutCntr]]) / daysInYear
+      nutSumTemp <- sum(nutTempRgn[,yr] * nutTempRgn[nutCodes[nutCntr]]) / daysInYear
       vecTemp <-append(vecTemp,nutSumTemp)
     }
   } else 
@@ -338,7 +337,7 @@ wb <- createWorkbook()
 #choose the region
 rgn <- ctyNames[65] #151 is USA; 43 is EGY; 65 is India. If you add an additional 'for' loop below, all the countries can be done at once.
 NutfileName <- paste("results/",rgn,climData,"nutOutput.xlsx",sep="")
-mat = matrix(ncol = length(yrs), nrow = length(nutNames))
+mat = matrix(ncol = length(yrs), nrow = length(nutCodes))
 # 
 #Set up the lists to be used document all the worksheets
 sheetNameList <- ("Sheet names")
@@ -407,7 +406,7 @@ for (cat in catList ) {
     tempYrs <- (yrs[yrCntr])
     mat[,yrCntr]<- f.nutSum(rgn,cat,tempYrs)
   }
-  row.names(mat)<-nutNames
+  row.names(mat)<-nutCodes
   colnames(mat)<-yrs
   if(cat=="allFoodGroups"){
     mat.all <- mat
@@ -464,8 +463,8 @@ addStyle(wb, sheet=tempSheetName, style=shareStyle, rows = 2:(nrow(EARWomen)+1),
 #-----------------------
 # calculate the Shannon Wiener diversity index (H)
 # H = -SUM[(pi) × ln(pi)], where pi is share of nutrient from ith food group
-sumOfShares <- matrix(0,ncol = length(yrs), nrow = length(nutNames))
-row.names(sumOfShares)<-nutNames
+sumOfShares <- matrix(0,ncol = length(yrs), nrow = length(nutCodes))
+row.names(sumOfShares)<-nutCodes
 colnames(sumOfShares)<-yrs
 for (cat in c("cereals", "roots", "fruits", "meats","beverages","eggs","oilSeeds","vegetables")) {
   #for (cat in c("cereals", "roots", "fruits", "meats","beverages","eggs","oilSeeds","vegetables","vegeOil")) {
