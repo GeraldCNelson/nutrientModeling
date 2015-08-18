@@ -22,40 +22,46 @@ setwd("~/Documents/workspace/nutrientModeling")
 # Info for the basic worksheet ---------------------------------------
 userName <- "Gerald Nelson"
 dataSource <- "URL here"
-dateDownloaded <- "Date here"
+dateDownloaded <- "Date URL downloaded here"
 dateCreated <- Sys.time()
 
 # File names, related info and locations -----------------------------------
-NFileName <- "data/GFS nutrient matrix production & supply IMPACT codedV2.xlsx"
-IMPACTfileName <- "data/DemandPerCapJan2015Results.xlsx"
-climData <- ".NoCC.MidGDPMidPop." #used to construct output file name
-IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.csv" # this file includes Denmark plus (DNP) and Sudan plus (SDP) and remove Greenland and South Sudan
-IMPACTpricesFileName <- "data/IMPACTPricesJan2015.xlsx"
-EARFile <- "data/DRI EAR valuesV2.xlsx"
+nutrientFileName <- "data/USDA GFS IMPACT V5.xlsx"
+IMPACTfileName <- "data/IMPACTData/Demand Results20150729.csv"
+EARFileName <- "data/DRI EAR valuesV2.xlsx"
 commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.xlsx"
 
-IMPACTfoodCommodities <- c("cbeef","cpork","clamb","cpoul","ceggs","cmilk","cbarl","cmaiz",
-"cmill","crice","csorg","cwhea","cocer","ccass","cpota","cswpt","cyams","corat","cbean","cchkp",
-"ccowp","clent","cpigp","copul","cbana","cplnt","csubf","ctemf","cvege","csugr","cgrnd","cgdol",
-"crpsd","crpol","csoyb","csbol","csnfl","csfol","cplol","cpkol","ctols","ctool","ccoco","ccafe",
-"cteas","cothr")
+#IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.csv" # this file includes Denmark plus (DNP) and Sudan plus (SDP) and removes Greenland and South Sudan
+IMPACTregionsFileName <- "data/IMPACTRegionsJan15tmp.csv" # this file removes Denmark plus (DNP) and South Sudan (SSD) as well as removes Greenland and South Sudan
+IMPACTregions <- read.csv(IMPACTregionsFileName)
+ctyNames  <- IMPACTregions$CTY
 
-#sort the list
-IMPACTfoodCommodities <- IMPACTfoodCommodities[sort.list(IMPACTfoodCommodities)]
+#climData <- ".NoCC.MidGDPMidPop." #used to construct output file name
+
+#sorted list of IMPACT food commodities
+tmp <- sort(c("cbeef","cpork","clamb","cpoul","ceggs","cmilk","cbarl","cmaiz",
+              "cmill","crice","csorg","cwhea","cocer","ccass","cpota","cswpt","cyams","corat","cbean","cchkp",
+              "ccowp","clent","cpigp","copul","cbana","cplnt","csubf","ctemf","cvege","csugr","cgrnd","cgdol",
+              "crpsd","crpol","csoyb","csbol","csnfl","csfol","cplol","cpkol","ctols","ctool","ccoco","ccafe",
+              "cteas","cothr"))
+IMPACTfoodCommodities <- as.data.frame(tmp,stringsAsFactors = FALSE)
+colnames(IMPACTfoodCommodities) <- "IMPACT_code"
 
 daysInYear <- 365 #see http://stackoverflow.com/questions/9465817/count-days-per-year for a way to deal with leap years
 
 # Read in and clean up files ----------------------------------------------
 
 # Food groups and commodities ---------------------------------------------
-# This set of 13 food groups will be reviewed at a workshop in late June 2015 for possible revision.
+# 13 food groups 
 foodGroupsInfo <- read.xlsx(commodityFoodGroupLookupFileName, 
                        sheet = 1,
                        startRow = 1,
+                       cols = 1:4,
                        colNames = TRUE)
 
 # Note: staples is not a food group per se but included here because it is used in one of the diversity metrics
 staples <- c("cereals", "roots")
+
 # This is the list of food group codes as of June 28, 2015
 # beverages <- c("beverages")
 # cereals <- c("cereals")
@@ -71,144 +77,91 @@ staples <- c("cereals", "roots")
 # sweeteners <- c("sugar and sweeteners")
 # vegetables <-c("vegetables")
 
-allFoodGroups <- unique(foodGroupsInfo$Food.group.codes)
-#get rid of the NA from the spreadsheet import
-allFoodGroups <- allFoodGroups[!is.na(allFoodGroups)]
+allFoodGroups <- unique(foodGroupsInfo$food.group.code)
 
 ## nutrient lookup table readin and cleanup -------------------------------
 #nutCodes <- c("ENERGY","PROT","FAT","CARBO","FIBR","CALC","PHOS","MGNS","POTS","SODM","IRON",
 #              "ZINC","COPR","MNGN","VITA","VITD","VITE","VITC","THIAM","RIBF","NIAC","VITB6","FOLC",
 #              "VITB12","PANTO") 
-nutrients <- read.xlsx(NFileName, 
-                       sheet = 1,
-                       startRow = 2,
-                       colNames = TRUE)
-nutCodes <- colnames(nutrients[,6:length(nutrients)])
 
-#convert the NAs to 0 except in the first 4 columns which are text fields
-temp <- nutrients[,5:ncol(nutrients)]
+nutCodes <- c("water", "energy", "protein", "fat", "carbohydrate", "fiber", "sugar", "minerals",	
+"calcium", "iron", "magnesium", "phosphorus", "potassium", "sodium", "zinc","vitamins",	
+"vitamin_c", "thiamin",	"riboflavin",	"niacin", "vitamin_b6",	"folate", "vitamin_b12",	
+"vitamin_a_RAE", 	"vitamin_a_IU",	"vitamin_e", "vitamin_d2_3", "vitamin_d",	"vitamin_k",
+"lipids", "fatty_acids_tot_sat", "fatty_acids_mono_unsat", "fatty_acids_polyunsat",	
+"cholesterol", "other", "caffeine", "fatty_acids_tot_trans")
+
+nutrients <- read.xlsx(nutrientFileName, 
+                       sheet = 1,
+                       rows = 3:46,
+                       cols = 1:46,
+                       colNames = TRUE)
+
+#convert the NAs to 0 except in the first 5 columns which are text fields
+temp <- nutrients[,6:ncol(nutrients)]
 temp[is.na(temp)] <- 0
-nutrients[,5:ncol(nutrients)] <- temp
+nutrients[,6:ncol(nutrients)] <- temp
 
 # change nutrient unit from 100 gm to 1 kg
 nutrients[,nutCodes] <- nutrients[,nutCodes] * 10
 
 # convert to IMPACT unit equivalents (nutrients per carcass weight for meat)
 nutrients[,nutCodes] <- 
-  nutrients[,nutCodes] * nutrients[,"conversion"]
+  nutrients[,nutCodes] * nutrients[,"IMPACT_conversion"]
 
 ## IMPACT commodity file readin and cleanup -------------------------------
-t1 <- read.xlsx(IMPACTfileName, 
-                sheet = 2,
-                startRow = 2,
-                colNames = FALSE)
+t1 <-read.csv(IMPACTfileName, stringsAsFactors = FALSE)
+colnames(t1) <- c("IMPACTparameter", "scenario", "IMPACT_code" , "region","productiontype", 
+                  "year", "value")
+t1$year <-  as.character(t1$year)
 
-colnames(t1) <- c("IMPACTparameter", "scenario", "IMPACT_code" , "region", "year", "value", "FoodAvailXAgg", "units")
+# Parameter,Description,csv IMPACT parameters,my short name
+# FoodAvailability,Food availability per capita (kg per person),FoodAvailXAgg,pcFoodAvail
+# GDPX0,Final GDP (billion 2005 USD ppp), NA
+# pcGDPX0,Final per capita GDP (000 USD per person ppp),pcGDPXAgg -- Per Capita Income,pcGDP
+# PCX0,Solution consumer prices (2005 USD ppp per mt)        ,PCXAgg -- Consumer Prices,Pc
+# PerCapKCal,per capita calories available (KCal per person per day),PerCapKCalXAgg,pcKcal
+# PopulationAtRisk,Number of people at risk of hunger (million),PopulationAtRiskXagg - Pop at Risk of Hunger,popAtRisk
+# POPX0,Final Population (million),PopXAgg -- Population,pop
+# PWX0,Solution world prices (2005 USD ppp per mt),PWXAgg -- World Prices,Pw
+# QBFX0,Solution biofuel feedstock demand (000 mt),QBFXAgg -- Biofuel Feedstock Demand,bioFuelD
+# QDX0,Solution total demand for commodity  (000 mt),QDXAgg -- Total Demand,QdTot
+# QFX0,Solution household demand aggregated to cty (000 mt),QFXAgg -- Household Demand,QfoodD
+# QINTX0,Solution intermediate demand for commodity (000 mt),QINTXAgg -- Intermediate Demand,intermedD
+# QLX0,Solution livestock feed demand (000 mt),QLXAgg -- Livestock Feed Demand,QfeedD
+# QOTHRX0,Solution Other demand (000 mt), NA
+# ShareAtRisk,Share of population at risk of hunger (%),ShareAtRiskXagg -- Share at Risk of Hunger,shareAtRisk
+# TotalMalnourished,Number of malnourished children (millions) ,TotalMalnourishedXagg -- Malnurished Children,totMalnourished
 
-t1.income <- t1[,c("IMPACTparameter","scenario","region","year","value")]
-PcIncome.IMPACT <- subset(t1.income,(t1$IMPACTparameter == "pcGDPXAgg -- Per Capita Income" ))
-PcIncome.IMPACT.wide <- dcast(PcIncome.IMPACT,scenario + region  ~ year, mean, value.var = "value")
-
-#Column names can't begin with a number so this command prepends an X
-colnames(PcIncome.IMPACT.wide) <- make.names(colnames(PcIncome.IMPACT.wide))
-
-#keep only food items
-t1.food <- t1[t1$IMPACT_code %in% IMPACTfoodCommodities, ]
-
-t1.food <- t1.food[,c("IMPACTparameter","scenario","IMPACT_code","region","year","value")] #get rid of extra columns
-#t2 <- t1[-grep("-",t1$IMPACT_code),] #include only the rows with commodity codes; remove those that contain a '-'.
-
-#include only the rows with "FoodAvailXAgg" ; remove those that contain "QFXAgg -- Household Demand".
-t2 <- subset(t1.food,IMPACTparameter == "FoodAvailXAgg") 
-
-#create the table with columns for region, commodity, and years
-commods <- dcast(t2,region + IMPACT_code ~ year, mean, value.var = "value")
-
-#add X in front of the year to make the column names syntactically correct
-colnames(commods) <- make.names(colnames(commods))
-
-#if any column in commods is a factor the next two lines convert it to character
-i <- sapply(commods, is.factor)
-commods[i] <- lapply(commods[i], as.character)
-
-#get the list of all the commodity names used in this IMPACT output
-cropNames <- as.data.frame(sort(unique(commods$IMPACT_code)), stringsAsFactors = FALSE)
-colnames(cropNames) <- "IMPACT_code"
-
-# the next line checks to see if the commods list of commodities is the same as that in IMPACTfoodCommodities
-identical(sort(unique(IMPACTfoodCommodities)), sort(unique(commods$IMPACT_code)))
-
-#cleanup
-rm(t1,t2,PcIncome.IMPACT,t1.income)
+#drop productiontype because it is not used in the demand analysis
+drops <- c("productiontype")
+t1 <- t1[, !(names(t1) %in% drops)]
+#give variables better names
+t1$IMPACTparameter <- gsub("PopXAgg -- Population","pop",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("QDXAgg -- Total Demand","QdTot",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("QLXAgg -- Livestock Feed Demand","QfeedD",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("pcGDPXAgg -- Per Capita Income","pcGDP",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("QFXAgg -- Household Demand","QfoodD",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("PWXAgg -- World Prices","Pw",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("FoodAvailXAgg","pcFoodAvail",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("PerCapKCalXAgg","pcKcal",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("PopulationAtRiskXagg - Pop at Risk of Hunger","popAtRisk",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("ShareAtRiskXagg -- Share at Risk of Hunger","shareAtRisk",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("TotalMalnourishedXagg -- Malnurished Children","totMalnourished",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("QBFXAgg -- Biofuel Feedstock Demand","bioFuelD",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("QINTXAgg -- Intermediate Demand","intermedD",t1$IMPACTparameter)
+t1$IMPACTparameter <- gsub("PCXAgg -- Consumer Prices","Pc",t1$IMPACTparameter)
 
 #Note to self: still need to aggregate to new regions for IMPACT
-regions <- sort(unique(commods$region))
-
-# Read in the IMPACT prices file
-worldPrices <- read.xlsx(IMPACTpricesFileName, 
-                       sheet = 1,
-                       startRow = 1,
-                       colNames = TRUE)
 
 #keep only food items
-worldPrices <- worldPrices[worldPrices$IMPACT_code %in% IMPACTfoodCommodities, ]
+t1.food <- t1[t1$IMPACT_code %in% IMPACTfoodCommodities$IMPACT_code,c("IMPACTparameter","IMPACT_code","scenario","region","year","value")]
 
-worldPrices.wide <- dcast(worldPrices,IMPACT_code ~ year, mean, value.var = "Val")
+#store per cap GDP 
+t1.pcGDP <- t1[t1$IMPACTparameter == "pcGDP",c("region","scenario","year","value")]
 
-# Add X to year column names
-colnames(worldPrices.wide) <- make.names(colnames(worldPrices.wide))
-
-# metric: income share of food expenditures -------------------------------
-
-## calculate how much is spent per day on IMPACT commodities (budget) and its share of per capita income (incomeShare), 
-## currently using world prices
-budget <- data.frame(matrix(vector(), 0, ncol(worldPrices.wide), 
-                            dimnames=NULL), stringsAsFactors=F)
-colnames(budget) <- c("region",colnames(worldPrices.wide[2:ncol(worldPrices.wide)]))
-
-incomeShare <- data.frame(matrix(vector(), 0, ncol(worldPrices.wide), 
-                            dimnames=NULL), stringsAsFactors=F)
-colnames(incomeShare) <- c("region",colnames(worldPrices.wide[2:ncol(worldPrices.wide)]))
-
-for (j in 1:length(regions)) { #j is regions
-  regionTmp <- subset(commods,(commods$region == regions[j] ))
-  tmp <- merge(regionTmp,cropNames, by = "IMPACT_code", all=TRUE )
- 
-   #remove the region column because this tmp has just region j in it
-  tmp[c("region")] <- list(NULL)
-  
-  #convert NAs to 0 so the math works
-  tmp[is.na(tmp)] <- 0
-  budget[j,1]<- c(regions[j])
-  incomeShare[j,1]<- c(regions[j])
-  
-  for (i in 3:ncol(worldPrices.wide)) { # i is years; starts at 3, col1 is scenario, col2 is region
-    #commodities in tmp are in kg/person per year
-    budget[j,i-1] <- sum(tmp[,i-1] * worldPrices.wide[,i])/365/1000
-    #PcIncome is in $1000/mt; convert to $1 and get average daily income
-    incomeShare[j,i-1] <- budget[j,i-1] / ((PcIncome.IMPACT.wide[j,i] * 1000)/365)
-    
-  }
-}
-
-budgetfileName <- paste("results/","budget",Sys.time(),sep="")
-incomeSharefileName <- paste("results/","incomeShare",Sys.time(),sep="")
-write.csv(budget, file = budgetfileName)
-write.csv(incomeShare, file = incomeSharefileName)
-
-# metric: Share of EAR consumed for the nutrients in nutCodes -------------
-
-IMPACTregions <- read.csv(IMPACTregionsFileName)
-ctyNames  <- IMPACTregions$CTY
-yrs <- colnames(commods)[-(1:2)] #list of the column names for the years of data
-
-# # #Read in the RDA data
-# RDAFile <- "RDAs.xlsx"
-# RDAs <- read.xlsx(RDAFile, colNames = TRUE,sheet = 1, startRow = 1)
-# RDAs <- RDAs[,2:4]
-
-#Read in the EARs data
-EARs <- read.xlsx(EARFile, sheet = 1, startRow = 3, colNames = FALSE)
+#Set up the EARs data
+EARs <- read.xlsx(EARFileName, sheet = 1, startRow = 3, colNames = FALSE)
 #make sure everything that should be numeric, is
 for (j in 3:length(EARs)) (EARs[j] <- as.numeric(EARs[,j]))
 #give the columns some names
@@ -268,6 +221,170 @@ EARs <- EARs[, !names(EARs) %in%
                  "M9_13","M14_18","M19_30","M_31_50","M51_70","M70Plus",
                  "F9_13","F14_18","F19_30","F_31_50","F51_70","F70Plus")]
 
+
+#set up excel output
+wb <- createWorkbook()
+#create styles to format the worksheets
+numStyle <- createStyle(numFmt = "0.0")
+numStyle3 <- createStyle(numFmt = "0.000")
+shareStyle <- createStyle(numFmt = "0.0%")
+textStyle <- createStyle(fontName = NULL, fontSize = NULL, fontColour = NULL,
+                         numFmt = "GENERAL", border = NULL,
+                         borderColour = getOption("openxlsx.borderColour", "black"),
+                         borderStyle = getOption("openxlsx.borderStyle", "thin"), bgFill = NULL,
+                         fgFill = NULL, halign = NULL, valign = NULL, textDecoration = NULL,
+                         wrapText = FALSE, textRotation = NULL)
+#Set up the lists to be used to document all the worksheets
+sheetNameList <- ("Sheet names")
+sheetNameDesc <- ("Description of sheet contents")
+
+#create a worksheet with info on creator, date, model version, etc.
+creationInfo <- ("Information on creator, date, model version, etc.")
+creationInfo <- rbind(creationInfo, paste("Creator:", userName))
+creationInfo <- rbind(creationInfo, paste("Date of file creation:", dateCreated))
+addWorksheet(wb, sheetName="creation_Info")
+writeData(wb, creationInfo, sheet="creation_Info", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+sheetNameList <- rbind(sheetNameList,"creation_Info")
+sheetNameDesc <- rbind(sheetNameDesc,"Information on creator, date, model version, etc.")
+
+#create a worksheet with info on the regions
+addWorksheet(wb, sheetName="metadataRegions")
+sheetNameList <- rbind(sheetNameList,"metadataRegions")
+sheetNameDesc <- rbind(sheetNameDesc,"metadata on regions")
+writeData(wb, IMPACTregions, sheet="metadataRegions", startRow=1, startCol=1, rowNames = FALSE)
+addStyle(wb, sheet="metadataRegions", 
+#         style=textStyle, 
+         rows = 1:nrow(IMPACTregions), 
+         cols = 1:ncol(IMPACTregions), gridExpand = TRUE)
+#setColWidths(wb, sheet="metadataRegions", cols = 1:ncol(IMPACTregions), widths="auto")
+
+#create a worksheet with info on the commodities and nutrients
+addWorksheet(wb, sheetName="metadataFoodCommods")
+#commodityNames <- cbind(nutrients[c("Name","IMPACT_code")])
+writeData(wb, nutrients, sheet="metadataFoodCommods", startRow=1, startCol=1)
+#setColWidths(wb, sheet="metadataCommodities", cols = 1:3, widths="auto")
+sheetNameList <- rbind(sheetNameList,"metadataFoodCommods")
+sheetNameDesc <- rbind(sheetNameDesc,
+                       "Metadata on commodities and their nutrient makeup")
+
+#create a worksheet with info on the nutrients
+addWorksheet(wb, sheetName="metadataNutrients")
+writeData(wb, nutCodes, sheet="metadataNutrients", startRow=1, startCol=1, rowNames = FALSE)
+sheetNameList <- rbind(sheetNameList,"metadataNutrients")
+sheetNameDesc <- rbind(sheetNameDesc,"metadata on nutrient composition of each commodity.")
+#setColWidths(wb, sheet="metadataNutrients", cols = 1:3, widths="auto")
+
+addWorksheet(wb, sheetName="metadataEARs")
+sheetNameList <- rbind(sheetNameList,"metadataEARs")
+sheetNameDesc <- rbind(sheetNameDesc,"Metadata on EAR for men and women, 31-50; units are the same as the nutrients metadata")
+writeData(wb, EARs, sheet="metadataEARs", startRow=1, startCol=1, rowNames = FALSE)
+addStyle(wb, sheet="metadataEARs", style=numStyle, rows = 2:nrow(EARs)+1, cols=2:ncol(EARs), gridExpand = TRUE)
+#setColWidths(wb, sheet="metadataEARs", cols = 1:ncol(EARs), widths="auto")
+
+# Loop over scenario and region -------------------------------------------
+
+for (i in c("SSP2-GFDL", "SSP2-MIROC", "SSP2-NoCC")) {
+  scen.t1.food <- t1.food[t1.food$scenario == i,c("IMPACTparameter","IMPACT_code","region","year","value")]
+  scen.pcGDP.IMPACT <- t1.pcGDP[t1.pcGDP$scenario == i,c("region","year","value")]
+  scen.pcGDP.IMPACT.wide <- dcast(scen.pcGDP.IMPACT, region ~ year, value.var = "value")
+  colnames(scen.pcGDP.IMPACT.wide) <- make.names(colnames(scen.pcGDP.IMPACT.wide))
+  
+  #world prices
+  Pw <- scen.t1.food[scen.t1.food$IMPACTparameter == "Pw", c("year","IMPACT_code","value")]
+  Pw.wide <- dcast(Pw,IMPACT_code ~ year, mean, value.var = "value"); colnames(Pw.wide) <- make.names(colnames(Pw.wide))
+  shtName <- paste("Pw_",i,sep="")
+  addWorksheet(wb, sheetName=shtName)
+  writeData(wb, Pw.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  sheetNameList <- rbind(sheetNameList,shtName)
+  sheetNameDesc <- rbind(sheetNameDesc,paste("World prices, (2005 USD ppp per mt), scenario", i))
+  
+  # metric: income share of food expenditures -------------------------------
+  
+  ## calculate how much is spent per day on IMPACT commodities (budget) and its share of per capita income (incomeShare), 
+  ## using domestic and world prices
+  
+  budget.Pw <- budget.Pc <- incomeShare.Pw <- incomeShare.Pc <- 
+    data.frame(matrix(vector(), 0, ncol(Pw.wide), dimnames=NULL), stringsAsFactors=F)
+
+colnames(budget.Pw) <- colnames(budget.Pc) <- colnames(incomeShare.Pw) <- colnames(incomeShare.Pc) <- c("region",colnames(Pw.wide[2:ncol(Pw.wide)]))
+
+  for (j in 1:length(ctyNames)) { #j is the row number of regions 
+    
+    #create per cap consumption df with no extraneous columns and make sure all food commodities included
+    tmp.food.percap <- scen.t1.food[scen.t1.food$IMPACTparameter == "pcFoodAvail", c("IMPACT_code","year","value")]
+    tmp.food.percap.wide <- dcast(tmp.food.percap, IMPACT_code ~ year, mean, value.var = "value"); colnames(tmp.food.percap.wide) <- make.names(colnames(tmp.food.percap.wide))
+    tmp.food.percap.wide <- merge(tmp.food.percap.wide,IMPACTfoodCommodities, by = "IMPACT_code", all.y = TRUE); tmp.food.percap.wide[is.na(tmp.food.percap.wide)] <- 0
+    
+    #domestic consumer prices with no extraneous columns and make sure all food commodities included
+    tmp.Pc <- scen.t1.food[scen.t1.food$IMPACTparameter == "Pc" & scen.t1.food$region == ctyNames[j], c("IMPACT_code","year","value")]
+    tmp.Pc.wide <- dcast(tmp.Pc,IMPACT_code ~ year, mean, value.var = "value")
+    tmp.Pc.wide <- merge(tmp.Pc.wide,IMPACTfoodCommodities, by = "IMPACT_code", all.y = TRUE); 
+    colnames(tmp.Pc.wide) <- make.names(colnames(tmp.Pc.wide))
+    tmp.Pc.wide[is.na(tmp.Pc.wide)] <- 0
+ 
+    budget.Pc[j,1] <- budget.Pw[j,1] <- incomeShare.Pc[j,1] <- incomeShare.Pw[j,1] <- as.character(ctyNames[j])
+    
+    for (k in 2:ncol(Pw.wide)) { # k is years; starts at 2, col1 is IMPACT_code
+      #commodities in tmp are in kg/person per year
+      budget.Pw[j,k] <- sum(tmp.food.percap.wide[j,k] * Pw.wide[,k])/365/1000
+      budget.Pc[j,k] <- sum(tmp.food.percap.wide[j,k] * tmp.Pc.wide[,k])/365/1000
+      #PcGDP is in $1000/mt; convert to $1 and get average daily income
+      incomeShare.Pw[j,k] <- budget.Pw[j,k] / ((scen.pcGDP.IMPACT.wide[j,k] * 1000)/365)
+      incomeShare.Pc[j,k] <- budget.Pc[j,k] / ((scen.pcGDP.IMPACT.wide[j,k] * 1000)/365)
+    } # end of loop to calculate budget cost and income share for a region
+  } #end of loop over regions
+  
+  #write results to the spreadsheet
+  shtName <- paste("Budget Pw",i,sep="")
+  addWorksheet(wb, sheetName=shtName)
+  writeData(wb, budget.Pw, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  sheetNameList <- rbind(sheetNameList,shtName)
+  sheetNameDesc <- rbind(sheetNameDesc,paste("Expenditures on IMPACT commodities at world prices, (2005 USD ppp per day), scenario", i))
+
+  shtName <- paste("Budget Pc",i,sep="")
+  addWorksheet(wb, sheetName=shtName)
+  writeData(wb, budget.Pc, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  sheetNameList <- rbind(sheetNameList,shtName)
+  sheetNameDesc <- rbind(sheetNameDesc,paste("Expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i))
+  
+  shtName <- paste("IncomeShare Pw",i,sep="")
+  addWorksheet(wb, sheetName=shtName)
+  writeData(wb, incomeShare.Pw, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  sheetNameList <- rbind(sheetNameList,shtName)
+  sheetNameDesc <- rbind(sheetNameDesc,paste("Income share of expenditures on IMPACT commodities at world prices, (2005 USD ppp per day), scenario", i))
+  
+  shtName <- paste("IncomeShare Pc",i,sep="")
+  addWorksheet(wb, sheetName=shtName)
+  writeData(wb, incomeShare.Pc, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  sheetNameList <- rbind(sheetNameList,shtName)
+  sheetNameDesc <- rbind(sheetNameDesc,paste("Income share of expenditures on IMPACT commodities at doemstic prices, (2005 USD ppp per day), scenario", i))
+  
+} #end of loop over scenarios
+
+#add sheet with info about each of the worksheets
+sheetNameMeta <-as.data.frame(cbind(sheetNameList,sheetNameDesc))
+addWorksheet(wb, sheetName="sheetInfo")
+writeData(wb, sheetNameMeta, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+addStyle(wb, sheet="sheetInfo", style=textStyle, rows = 1:nrow(sheetNameMeta), cols=1:(ncol(sheetNameMeta)), gridExpand = TRUE)
+setColWidths(wb, sheet="sheetInfo", cols = 1:2, widths=20)
+
+#move sheetInfo worksheet from the last to the first
+temp<- 2:length(names(wb))-1
+temp <- c(length(names(wb)),temp)
+worksheetOrder(wb) <- temp
+#quickie way to get results out
+saveWorkbook(wb, "testoutputfile.xlsx", overwrite = TRUE)
+
+# metric: Share of EAR consumed for the nutrients in nutCodes -------------
+
+
+yrs <- colnames(commods)[-(1:2)] #list of the column names for the years of data
+
+# # #Read in the RDA data
+# RDAFile <- "RDAs.xlsx"
+# RDAs <- read.xlsx(RDAFile, colNames = TRUE,sheet = 1, startRow = 1)
+# RDAs <- RDAs[,2:4]
+
 #test function inputs
 # rgn <- ctyNames[2]
 # yr <- yrs[1]
@@ -318,72 +435,17 @@ f.nutSum <-function(rgn,cat,yr) {
 }
 
 #steps to create the metadata info
-commodityNames <- cbind(nutrients[c("Name","IMPACT_code")])
+
 
 #create the spreadsheet for a country, add worksheets for metadata and put in the results folder of the working directory
-#create styles to format the worksheets
-numStyle <- createStyle(numFmt = "0.0")
-numStyle3 <- createStyle(numFmt = "0.000")
-shareStyle <- createStyle(numFmt = "0.0%")
-textStyle <- createStyle(fontName = NULL, fontSize = NULL, fontColour = NULL,
-                         numFmt = "GENERAL", border = NULL,
-                         borderColour = getOption("openxlsx.borderColour", "black"),
-                         borderStyle = getOption("openxlsx.borderStyle", "thin"), bgFill = NULL,
-                         fgFill = NULL, halign = NULL, valign = NULL, textDecoration = NULL,
-                         wrapText = FALSE, textRotation = NULL)
+
 
 wb <- createWorkbook()
 #choose the region
 rgn <- ctyNames[65] #151 is USA; 43 is EGY; 65 is India. If you add an additional 'for' loop below, all the countries can be done at once.
 NutfileName <- paste("results/",rgn,climData,"nutOutput.xlsx",sep="")
 mat = matrix(ncol = length(yrs), nrow = length(nutCodes))
-# 
-#Set up the lists to be used to document all the worksheets
-sheetNameList <- ("Sheet names")
-sheetNameDesc <- ("Description of sheet contents")
 
-#create a worksheet with info on creator, date, model version, etc.
-creationInfo <- ("Information on creator, date, model version, etc.")
-creationInfo <- rbind(creationInfo, paste("Creator:", userName))
-creationInfo <- rbind(creationInfo, paste("Date of file creation:", dateCreated))
-
-addWorksheet(wb, sheetName="creationInfo")
-writeData(wb, creationInfo, sheet="creationInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
-sheetNameList <- rbind(sheetNameList,"creationInfo")
-sheetNameDesc <- rbind(sheetNameDesc,"Information on creator, date, model version, etc.")
-
-#create a worksheet with info on the nutrients
-addWorksheet(wb, sheetName="metadataNutrients")
-writeData(wb, nutCodes, sheet="metadataNutrients", startRow=1, startCol=1, rowNames = FALSE)
-sheetNameList <- rbind(sheetNameList,"metadataNutrients")
-sheetNameDesc <- rbind(sheetNameDesc,"metadata on nutrient composition of each commodity.")
-#setColWidths(wb, sheet="metadataNutrients", cols = 1:3, widths="auto")
-
-#create a worksheet with info on the commodities, food groups and EARs
-addWorksheet(wb, sheetName="metadataCommodities")
-writeData(wb, commodityNames, sheet="metadataCommodities", startRow=1, startCol=1)
-#setColWidths(wb, sheet="metadataCommodities", cols = 1:3, widths="auto")
-sheetNameList <- rbind(sheetNameList,"metadataCommodities")
-sheetNameDesc <- rbind(sheetNameDesc,
-                   "Metadata on commodities, EARs and what commodities are in each food group. Note that the second row indicates whether a commodity is included in the IMPACT model.")
-
-#create a worksheet with info on the regions
-addWorksheet(wb, sheetName="metadataRegions")
-sheetNameList <- rbind(sheetNameList,"metadataRegions")
-sheetNameDesc <- rbind(sheetNameDesc,"metadata on regions")
-writeData(wb, IMPACTregions, sheet="metadataRegions", startRow=1, startCol=1, rowNames = FALSE)
-addStyle(wb, sheet="metadataRegions", 
-         style=textStyle, 
-         rows = 1:nrow(IMPACTregions), 
-         cols = 1:ncol(IMPACTregions), gridExpand = TRUE)
-#setColWidths(wb, sheet="metadataRegions", cols = 1:ncol(IMPACTregions), widths="auto")
-
-addWorksheet(wb, sheetName="metadataEARs")
-sheetNameList <- rbind(sheetNameList,"metadataEARs")
-sheetNameDesc <- rbind(sheetNameDesc,"Metadata on EAR for men and women, 31-50; units are the same as the nutrients metadata")
-writeData(wb, EARs, sheet="metadataEARs", startRow=1, startCol=1, rowNames = FALSE)
-addStyle(wb, sheet="metadataEARs", style=numStyle, rows = 2:nrow(EARs)+1, cols=2:ncol(EARs), gridExpand = TRUE)
-#setColWidths(wb, sheet="metadataEARs", cols = 1:ncol(EARs), widths="auto")
 
 #create worksheet with daily consumption of all the commodities
 pcCons <- paste(rgn,"PcCons",sep=".")
@@ -492,7 +554,7 @@ temp<- 2:length(names(wb))-1
 temp <- c(length(names(wb)),temp)
 worksheetOrder(wb) <- temp
 
-saveWorkbook(wb, NutfileName, overwrite = TRUE)
+saveWorkbook(wb, "testoutputfile.xlsx", overwrite = TRUE)
 
 # metric: MFAD ------------------------------------------------------------
 
