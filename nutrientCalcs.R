@@ -23,7 +23,7 @@ setwd("~/Documents/workspace/nutrientModeling")
 userName <- "Gerald Nelson"
 dataSource <- "URL here"
 dateDownloaded <- "Date URL downloaded here"
-dateCreated <- Sys.time()
+dateCreated <- Sys.Date()
 
 # File names, related info and locations -----------------------------------
 nutrientFileName <- "data/USDA GFS IMPACT V5.xlsx"
@@ -35,7 +35,7 @@ commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.
 IMPACTregionsFileName <- "data/IMPACTRegionsJan15tmp.csv" # this file removes Denmark plus (DNP) and South Sudan (SSD) as well as removes Greenland and South Sudan
 IMPACTregions <- read.csv(IMPACTregionsFileName)
 ctyNames  <- IMPACTregions$CTY
-xcelOutFileName <- paste("nutrMetrics",dateCreated,".xlsx",sep="")
+xcelOutFileName <- paste("nutrMetrics_",dateCreated,".xlsx",sep="")
 
 #climData <- ".NoCC.MidGDPMidPop." #used to construct output file name
 
@@ -365,6 +365,8 @@ colnames(budget.Pw) <- colnames(budget.Pc) <- colnames(incomeShare.Pw) <- colnam
   wbInfo[(nrow(wbInfo)+1),] <- c(paste("=HYPERLINK(",shtName,"!A1",shtName, sep=""),  paste("Income share of expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i))
 } #end of loop over scenarios
 
+#convert wbInfo sheet_Name column to class hyperlink
+class(wbInfo$sheet_Name) <- 'hyperlink'
 #add sheet with info about each of the worksheets
 addWorksheet(wb, sheetName="sheetInfo")
 writeData(wb, wbInfo, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
