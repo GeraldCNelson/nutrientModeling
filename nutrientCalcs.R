@@ -13,7 +13,7 @@
 #     but WITHOUT ANY WARRANTY; without even the implied warranty of
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
-library(openxlsx) 
+library(openxlsx)
 library(entropy)
 library(dplyr)
 library(reshape2)
@@ -35,6 +35,7 @@ commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.
 IMPACTregionsFileName <- "data/IMPACTRegionsJan15tmp.csv" # this file removes Denmark plus (DNP) and South Sudan (SSD) as well as removes Greenland and South Sudan
 IMPACTregions <- read.csv(IMPACTregionsFileName)
 ctyNames  <- IMPACTregions$CTY
+xcelOutFileName <- paste("nutrMetrics",dateCreated,".xlsx",sep="")
 
 #climData <- ".NoCC.MidGDPMidPop." #used to construct output file name
 
@@ -96,6 +97,11 @@ nutrients <- read.xlsx(nutrientFileName,
                        rows = 3:46,
                        cols = 1:46,
                        colNames = TRUE)
+nutrientNames_Units <- read.xlsx(nutrientFileName, 
+                                 sheet = 1,
+                                 rows = 1:3,
+                                 cols = 10:46,
+                                 colNames = FALSE)
 
 #convert the NAs to 0 except in the first 5 columns which are text fields
 temp <- nutrients[,6:ncol(nutrients)]
@@ -234,26 +240,29 @@ textStyle <- createStyle(fontName = NULL, fontSize = NULL, fontColour = NULL,
                          borderStyle = getOption("openxlsx.borderStyle", "thin"), bgFill = NULL,
                          fgFill = NULL, halign = NULL, valign = NULL, textDecoration = NULL,
                          wrapText = FALSE, textRotation = NULL)
-#Set up the lists to be used to document all the worksheets
-sheetNameList <- ("Sheet names")
-sheetNameDesc <- ("Description of sheet contents")
+#Set up a dataframe to document all the worksheets. It will become the first worksheet in the workbook
+wbInfo <- data.frame(sheet_Name=character(),sheet_Desc=character(), stringsAsFactors = FALSE)
+
+wbInfo[(nrow(wbInfo)+1),] <- c("Sheet names", "Description of sheet contents")
 
 #create a worksheet with info on creator, date, model version, etc.
 creationInfo <- ("Information on creator, date, model version, etc.")
 creationInfo <- rbind(creationInfo, paste("Creator:", userName))
 creationInfo <- rbind(creationInfo, paste("Date of file creation:", dateCreated))
+creationInfo <- rbind(creationInfo, paste("IMPACT data:", IMPACTfileName))
+creationInfo <- rbind(creationInfo, paste("Nutrient data:", nutrientFileName))
+creationInfo <- rbind(creationInfo, paste("EAR data:", EARFileName))
+
 addWorksheet(wb, sheetName="creation_Info")
 writeData(wb, creationInfo, sheet="creation_Info", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
-sheetNameList <- rbind(sheetNameList,"creation_Info")
-sheetNameDesc <- rbind(sheetNameDesc,"Information on creator, date, model version, etc.")
+wbInfo[(nrow(wbInfo)+1),] <- c("creation_Info", "Information on creator, date, model version, etc.")
 
 #create a worksheet with info on the regions
 addWorksheet(wb, sheetName="metadataRegions")
-sheetNameList <- rbind(sheetNameList,"metadataRegions")
-sheetNameDesc <- rbind(sheetNameDesc,"metadata on regions")
+wbInfo[(nrow(wbInfo)+1),] <- c("=HYPERLINK(metadataRegions!A1,\"metadataRegions\")", "metadata on regions.")
 writeData(wb, IMPACTregions, sheet="metadataRegions", startRow=1, startCol=1, rowNames = FALSE)
 addStyle(wb, sheet="metadataRegions", 
-#         style=textStyle, 
+         style=textStyle, 
          rows = 1:nrow(IMPACTregions), 
          cols = 1:ncol(IMPACTregions), gridExpand = TRUE)
 #setColWidths(wb, sheet="metadataRegions", cols = 1:ncol(IMPACTregions), widths="auto")
@@ -263,20 +272,18 @@ addWorksheet(wb, sheetName="metadataFoodCommods")
 #commodityNames <- cbind(nutrients[c("Name","IMPACT_code")])
 writeData(wb, nutrients, sheet="metadataFoodCommods", startRow=1, startCol=1)
 #setColWidths(wb, sheet="metadataCommodities", cols = 1:3, widths="auto")
-sheetNameList <- rbind(sheetNameList,"metadataFoodCommods")
-sheetNameDesc <- rbind(sheetNameDesc,
-                       "Metadata on commodities and their nutrient makeup")
+wbInfo[(nrow(wbInfo)+1),] <- c("=HYPERLINK(metadataFoodCommods!A1,\"metadataFoodCommods\")", "Metadata on commodities and their nutrient makeup.")
 
 #create a worksheet with info on the nutrients
 addWorksheet(wb, sheetName="metadataNutrients")
-writeData(wb, nutCodes, sheet="metadataNutrients", startRow=1, startCol=1, rowNames = FALSE)
-sheetNameList <- rbind(sheetNameList,"metadataNutrients")
-sheetNameDesc <- rbind(sheetNameDesc,"metadata on nutrient composition of each commodity.")
-#setColWidths(wb, sheet="metadataNutrients", cols = 1:3, widths="auto")
+writeData(wb, nutrientNames_Units, sheet="metadataNutrients", startRow=1, startCol=1, rowNames = FALSE,colNames = FALSE)
+wbInfo[(nrow(wbInfo)+1),] <- c("=HYPERLINK(metadataNutrients!A1,\"metadataNutrients\")", 
+                               paste("Metadata on nutrient names and units, from the file ", nutrientFileName,sep=""))
 
 addWorksheet(wb, sheetName="metadataEARs")
-sheetNameList <- rbind(sheetNameList,"metadataEARs")
-sheetNameDesc <- rbind(sheetNameDesc,"Metadata on EAR for men and women, 31-50; units are the same as the nutrients metadata")
+wbInfo[(nrow(wbInfo)+1),] <- c("=HYPERLINK(metadataEARs!A1,\"metadataEARs\")", 
+                               paste("Metadata on EARs; units are the same as the nutrients metadata."))
+
 writeData(wb, EARs, sheet="metadataEARs", startRow=1, startCol=1, rowNames = FALSE)
 addStyle(wb, sheet="metadataEARs", style=numStyle, rows = 2:nrow(EARs)+1, cols=2:ncol(EARs), gridExpand = TRUE)
 #setColWidths(wb, sheet="metadataEARs", cols = 1:ncol(EARs), widths="auto")
@@ -295,9 +302,10 @@ for (i in c("SSP2-GFDL", "SSP2-MIROC", "SSP2-NoCC")) {
   shtName <- paste("Pw_",i,sep="")
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, Pw.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  sheetNameList <- rbind(sheetNameList,shtName)
-  sheetNameDesc <- rbind(sheetNameDesc,paste("World prices, (2005 USD ppp per mt), scenario", i))
-  
+  hyperLinkVar <- paste('=HYPERLINK(',shtName,'!A1, \"',shtName,'\")', sep="")
+  descVar <- paste("World prices, (2005 USD ppp per mt), scenario", i)
+  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
+
   # metric: income share of food expenditures -------------------------------
   
   ## calculate how much is spent per day on IMPACT commodities (budget) and its share of per capita income (incomeShare), 
@@ -326,8 +334,8 @@ colnames(budget.Pw) <- colnames(budget.Pc) <- colnames(incomeShare.Pw) <- colnam
     
     for (k in 2:ncol(Pw.wide)) { # k is years; starts at 2, col1 is IMPACT_code
       #commodities in tmp are in kg/person per year
-      budget.Pw[j,k] <- sum(tmp.food.percap.wide[j,k] * Pw.wide[,k])/365/1000
-      budget.Pc[j,k] <- sum(tmp.food.percap.wide[j,k] * tmp.Pc.wide[,k])/365/1000
+      budget.Pw[j,k] <- sum(tmp.food.percap.wide[k] * Pw.wide[k])/365/1000
+      budget.Pc[j,k] <- sum(tmp.food.percap.wide[k] * tmp.Pc.wide[k])/365/1000
       #PcGDP is in $1000/mt; convert to $1 and get average daily income
       incomeShare.Pw[j,k] <- budget.Pw[j,k] / ((scen.pcGDP.IMPACT.wide[j,k] * 1000)/365)
       incomeShare.Pc[j,k] <- budget.Pc[j,k] / ((scen.pcGDP.IMPACT.wide[j,k] * 1000)/365)
@@ -344,27 +352,22 @@ colnames(budget.Pw) <- colnames(budget.Pc) <- colnames(incomeShare.Pw) <- colnam
   shtName <- paste("Budget Pc",i,sep="")
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, budget.Pc, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  sheetNameList <- rbind(sheetNameList,shtName)
-  sheetNameDesc <- rbind(sheetNameDesc,paste("Expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i))
-  
+  wbInfo[(nrow(wbInfo)+1),] <- c(paste("=HYPERLINK(",shtName,"!A1",shtName, sep=""),  paste("Expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i))
+
   shtName <- paste("IncomeShare Pw",i,sep="")
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, incomeShare.Pw, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  sheetNameList <- rbind(sheetNameList,shtName)
-  sheetNameDesc <- rbind(sheetNameDesc,paste("Income share of expenditures on IMPACT commodities at world prices, (2005 USD ppp per day), scenario", i))
-  
+  wbInfo[(nrow(wbInfo)+1),] <- c(paste("=HYPERLINK(",shtName,"!A1",shtName, sep=""),  paste("Income share of expenditures on IMPACT commodities at world prices, (2005 USD ppp per day), scenario", i))
+
   shtName <- paste("IncomeShare Pc",i,sep="")
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, incomeShare.Pc, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  sheetNameList <- rbind(sheetNameList,shtName)
-  sheetNameDesc <- rbind(sheetNameDesc,paste("Income share of expenditures on IMPACT commodities at doemstic prices, (2005 USD ppp per day), scenario", i))
-  
+  wbInfo[(nrow(wbInfo)+1),] <- c(paste("=HYPERLINK(",shtName,"!A1",shtName, sep=""),  paste("Income share of expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i))
 } #end of loop over scenarios
 
 #add sheet with info about each of the worksheets
-sheetNameMeta <-as.data.frame(cbind(sheetNameList,sheetNameDesc))
 addWorksheet(wb, sheetName="sheetInfo")
-writeData(wb, sheetNameMeta, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+writeData(wb, wbInfo, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
 addStyle(wb, sheet="sheetInfo", style=textStyle, rows = 1:nrow(sheetNameMeta), cols=1:(ncol(sheetNameMeta)), gridExpand = TRUE)
 setColWidths(wb, sheet="sheetInfo", cols = 1:2, widths=20)
 
@@ -372,11 +375,9 @@ setColWidths(wb, sheet="sheetInfo", cols = 1:2, widths=20)
 temp<- 2:length(names(wb))-1
 temp <- c(length(names(wb)),temp)
 worksheetOrder(wb) <- temp
-#quickie way to get results out
-saveWorkbook(wb, "testoutputfile.xlsx", overwrite = TRUE)
+saveWorkbook(wb, xcelOutFileName, overwrite = TRUE)
 
 # metric: Share of EAR consumed for the nutrients in nutCodes -------------
-
 
 yrs <- colnames(commods)[-(1:2)] #list of the column names for the years of data
 
@@ -399,11 +400,11 @@ f.regionCmdty <- function(rgn)
     #error checking. At the moment it just checks for typos.
     stop(paste(rgn, " is not in the list of countries in the IMPACT output file"))
   }
-  regionTemp <- subset(commods, region == rgn)
+  regionTemp <- subset(t1.food, region == rgn)
 }
 
-f.nutSum <-function(rgn,cat,yr) {
-  #function to generate data frame that for a given region and yr has the sum of each nutrient from a category of food stuffs
+f.nutSum <-function(scen,rgn,cat,yr) {
+  #function to generate data frame that for a given scenario, region, food group and yr has the sum of each nutrient from a category of food stuffs
   #rgn is a 3 letter country name
   #cat is a list of food categories
   #yr is a string that is the name of a column in rgn
