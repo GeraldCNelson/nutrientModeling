@@ -27,7 +27,7 @@ dateCreated <- Sys.Date()
 
 # File names, related info and locations -----------------------------------
 nutrientFileName <- "data/USDA GFS IMPACT V5.xlsx"
-IMPACTfileName <- "data/IMPACTData/Demand Results20150729.csv"
+IMPACTfileName <- "data/IMPACTData/Demand Results20150817.csv"
 EARFileName <- "data/DRI EAR valuesV2.xlsx"
 commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.xlsx"
 
@@ -346,31 +346,39 @@ colnames(budget.Pw) <- colnames(budget.Pc) <- colnames(incomeShare.Pw) <- colnam
   shtName <- paste("Budget Pw",i,sep="")
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, budget.Pw, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  sheetNameList <- rbind(sheetNameList,shtName)
-  sheetNameDesc <- rbind(sheetNameDesc,paste("Expenditures on IMPACT commodities at world prices, (2005 USD ppp per day), scenario", i))
-
+  hyperLinkVar <- paste('=HYPERLINK(',shtName,'!A1, \"',shtName,'\")', sep="")
+  descVar <- paste("World prices, (2005 USD ppp per mt), scenario", i)
+  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
+  
   shtName <- paste("Budget Pc",i,sep="")
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, budget.Pc, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  wbInfo[(nrow(wbInfo)+1),] <- c(paste("=HYPERLINK(",shtName,"!A1",shtName, sep=""),  paste("Expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i))
-
+  hyperLinkVar <- paste('=HYPERLINK(',shtName,'!A1, \"',shtName,'\")', sep="")
+  descVar <- paste("Expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i)
+  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
+  
   shtName <- paste("IncomeShare Pw",i,sep="")
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, incomeShare.Pw, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  wbInfo[(nrow(wbInfo)+1),] <- c(paste("=HYPERLINK(",shtName,"!A1",shtName, sep=""),  paste("Income share of expenditures on IMPACT commodities at world prices, (2005 USD ppp per day), scenario", i))
-
+  hyperLinkVar <- paste('=HYPERLINK(',shtName,'!A1, \"',shtName,'\")', sep="")
+  descVar <- paste("Income share of expenditures on IMPACT commodities at world prices, (2005 USD ppp per day), scenario", i)
+  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
+  
   shtName <- paste("IncomeShare Pc",i,sep="")
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, incomeShare.Pc, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  wbInfo[(nrow(wbInfo)+1),] <- c(paste("=HYPERLINK(",shtName,"!A1",shtName, sep=""),  paste("Income share of expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i))
-} #end of loop over scenarios
+  hyperLinkVar <- paste('=HYPERLINK(',shtName,'!A1, \"',shtName,'\")', sep="")
+  descVar <- paste("Income share of expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i)
+  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
+  
+  } #end of loop over scenarios
 
 #convert wbInfo sheet_Name column to class hyperlink
 class(wbInfo$sheet_Name) <- 'hyperlink'
 #add sheet with info about each of the worksheets
 addWorksheet(wb, sheetName="sheetInfo")
 writeData(wb, wbInfo, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
-addStyle(wb, sheet="sheetInfo", style=textStyle, rows = 1:nrow(sheetNameMeta), cols=1:(ncol(sheetNameMeta)), gridExpand = TRUE)
+addStyle(wb, sheet="sheetInfo", style=textStyle, rows = 1:nrow(wbInfo), cols=1:(ncol(wbInfo)), gridExpand = TRUE)
 setColWidths(wb, sheet="sheetInfo", cols = 1:2, widths=20)
 
 #move sheetInfo worksheet from the last to the first
@@ -545,19 +553,7 @@ addStyle(wb, sheet="Shannon Diversity Score", style=numStyle, rows = 2:(nrow(sha
 sheetNameList <- rbind(sheetNameList, "Shannon Diversity Score")
 sheetNameDesc <- rbind(sheetNameDesc, "A measure of the diversity of the diet. Can only be calculated if consumption of all commodities is greater than zero.")
 
-#add sheet with info about each of the worksheets
-sheetNameMeta <-as.data.frame(cbind(sheetNameList,sheetNameDesc))
-addWorksheet(wb, sheetName="sheetInfo")
-writeData(wb, sheetNameMeta, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
-addStyle(wb, sheet="sheetInfo", style=textStyle, rows = 1:nrow(sheetNameMeta), cols=1:(ncol(sheetNameMeta)), gridExpand = TRUE)
-setColWidths(wb, sheet="sheetInfo", cols = 1:2, widths=20)
 
-#move sheetInfo worksheet from the last to the first
-temp<- 2:length(names(wb))-1
-temp <- c(length(names(wb)),temp)
-worksheetOrder(wb) <- temp
-
-saveWorkbook(wb, "testoutputfile.xlsx", overwrite = TRUE)
 
 # metric: MFAD ------------------------------------------------------------
 
