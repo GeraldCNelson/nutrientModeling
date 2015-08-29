@@ -33,7 +33,6 @@ source(file="nutrientFunctions.R")
 #Read in data
 source(file="nutrientDataLoading.R")
 
-
 # Parameter,Description,csv IMPACT parameters,my short name
 # FoodAvailability,Food availability per capita (kg per person),FoodAvailXAgg,pcFoodAvail
 # GDPX0,Final GDP (billion 2005 USD ppp), NA

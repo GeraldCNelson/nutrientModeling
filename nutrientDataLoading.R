@@ -90,7 +90,7 @@ nutrients[,nutCodes] <-
   nutrients[,nutCodes] * nutrients[,"IMPACT_conversion"]
 nutrients[,nutCodes] * nutrients[,"edible_share"]
 
-#drop columns that are not needed
+#include only columns that are needed; IMPACT code and nutrient names
 includes <- c("IMPACT_code", nutCodes)
 
 nutrients <- nutrients[, (names(nutrients) %in% includes)]
