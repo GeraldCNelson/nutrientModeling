@@ -88,7 +88,12 @@ nutrients[,nutCodes] <- nutrients[,nutCodes] * 10
 # convert to IMPACT unit equivalents (nutrients per carcass weight for meat)
 nutrients[,nutCodes] <- 
   nutrients[,nutCodes] * nutrients[,"IMPACT_conversion"]
+nutrients[,nutCodes] * nutrients[,"edible_share"]
 
+#drop columns that are not needed
+includes <- c("IMPACT_code", nutCodes)
+
+nutrients <- nutrients[, (names(nutrients) %in% includes)]
 #add food groups to nutrients in a column called category
 tmp <- foodGroupsInfo[,c("IMPACT_code","food.group.code")]
 nutrients <- merge(nutrients, tmp, by = "IMPACT_code")

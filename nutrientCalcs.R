@@ -17,6 +17,8 @@ library(openxlsx)
 library(entropy)
 library(dplyr)
 library(reshape2)
+library(plyr); library(dplyr)
+library(tidyr)
 setwd("~/Documents/workspace/nutrientModeling")
 
 # Info for the basic worksheet ---------------------------------------
@@ -26,8 +28,11 @@ dateDownloaded <- "Date URL downloaded here"
 dateCreated <- Sys.Date()
 
 # File names, related info and locations -----------------------------------
-source(file="nutrientFunctions.R")
 # Load functions for the rest of the script
+source(file="nutrientFunctions.R")
+#Read in data
+source(file="nutrientDataLoading.R")
+
 
 # Parameter,Description,csv IMPACT parameters,my short name
 # FoodAvailability,Food availability per capita (kg per person),FoodAvailXAgg,pcFoodAvail
@@ -51,7 +56,24 @@ source(file="nutrientFunctions.R")
 
 #keep only food items
 t1.food <- t1[t1$IMPACT_code %in% IMPACTfoodCommodities$IMPACT_code,c("IMPACTparameter","IMPACT_code","scenario","region","year","value")]
+#store per cap GDP 
+t1.pcGDP <- t1[t1$IMPACTparameter == "pcGDPXAgg -- Per Capita Income",c("region","scenario","year","value")]
 
+#give variables better names; commented out variables are only in t1.
+#t1.food$IMPACTparameter <- gsub("PopXAgg -- Population","pop",t1.food$IMPACTparameter)
+t1.food$IMPACTparameter <- gsub("QDXAgg -- Total Demand","QdTot",t1.food$IMPACTparameter)
+t1.food$IMPACTparameter <- gsub("QLXAgg -- Livestock Feed Demand","QfeedD",t1.food$IMPACTparameter)
+#t1.food$IMPACTparameter <- gsub("pcGDPXAgg -- Per Capita Income","pcGDP",t1.food$IMPACTparameter)
+t1.food$IMPACTparameter <- gsub("QFXAgg -- Household Demand","QfoodD",t1.food$IMPACTparameter)
+t1.food$IMPACTparameter <- gsub("PWXAgg -- World Prices","Pw",t1.food$IMPACTparameter)
+t1.food$IMPACTparameter <- gsub("FoodAvailXAgg","pcFoodAvail",t1.food$IMPACTparameter)
+t1.food$IMPACTparameter <- gsub("PerCapKCalCXAgg -- PcKcal by Commodity","pcKcal",t1.food$IMPACTparameter)
+#t1.food$IMPACTparameter <- gsub("PopulationAtRiskXagg - Pop at Risk of Hunger","popAtRisk",t1.food$IMPACTparameter)
+#t1.food$IMPACTparameter <- gsub("ShareAtRiskXagg -- Share at Risk of Hunger","shareAtRisk",t1.food$IMPACTparameter)
+#t1.food$IMPACTparameter <- gsub("TotalMalnourishedXagg -- Malnurished Children","totMalnourished",t1.food$IMPACTparameter)
+t1.food$IMPACTparameter <- gsub("QBFXAgg -- Biofuel Feedstock Demand","bioFuelD",t1.food$IMPACTparameter)
+t1.food$IMPACTparameter <- gsub("QINTXAgg -- Intermediate Demand","intermedD",t1.food$IMPACTparameter)
+t1.food$IMPACTparameter <- gsub("PCXAgg -- Consumer Prices","Pc",t1.food$IMPACTparameter)
 #set up excel output
 source(worksheetCreation.R)
 
@@ -100,39 +122,69 @@ addStyle(wb, sheet="metadataEARs", style=numStyle, rows = 2:nrow(EARs)+1, cols=2
 
 # Loop over scenario and region -------------------------------------------
 
-for (i in c( "SSP2-NoCC", "SSP2-GFDL", "SSP2-MIROC")) {
+# for (i in c( "SSP2-NoCC", "SSP2-GFDL", "SSP2-MIROC")) {
+# 
+#   #world prices
+#   Pw.wide <- f.Pw(i)
+#   shtName <- paste("Pw_",i,sep="")
+#   addWorksheet(wb, sheetName=shtName)
+#   writeData(wb, Pw.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+#   hyperLinkVar <- paste('=HYPERLINK(',shtName,'!A1, \"',shtName,'\")', sep="")
+#   descVar <- paste("World prices, (2005 USD ppp per mt), scenario", i)
+#   wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
+#   
+#     for (j in 1:length(ctyNames)) { #j is the row number of regions 
+#     
+# # metric: income share of food expenditures -------------------------------
+#   
+#   ## calculate how much is spent per day on IMPACT commodities (budget) and its share of per capita income (incomeShare), 
+#   ## using domestic and world prices
+#       
+#       tmp.perCapFood <- f.perCapFood(i,rgn = ctyNames[j])
+# 
+#       budget.Pw <- colSums(data.frame(mapply(`*`,tmp.perCapFood[,2:47],Pw.wide[,2:47])))/365/1000
+#       
+#       budget.Pcon <- colSums(data.frame(mapply(`*`,tmp.perCapFood[,2:47],
+#                                                f.Pcon(i,rgn = ctyNames[j])[,2:47])))/365/1000
+# 
+#       incomeShare.Pw <- data.frame(mapply(`/`,(budget.Pw[,2:47],
+#                                                (f.perCapGDP(i,rgn = ctyNames[j])[,2:47]) * 1000/365
+#       
+#           incomeShare.Pw <- budget.Pw / ((f.perCapGDP(i,rgn = ctyNames[j]) * 1000)/365)
+#       incomeShare.Pcon <- budget.Pcon /  ((f.perCapGDP(i,rgn = ctyNames[j]) * 1000)/365)
+      
+#     } # end of loop to calculate budget cost and income share for a region
+#   } #end of loop over regions
 
-  #world prices
-  Pw.wide <- f.Pw(i)
-  shtName <- paste("Pw_",i,sep="")
-  addWorksheet(wb, sheetName=shtName)
-  writeData(wb, Pw.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  hyperLinkVar <- paste('=HYPERLINK(',shtName,'!A1, \"',shtName,'\")', sep="")
-  descVar <- paste("World prices, (2005 USD ppp per mt), scenario", i)
-  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
-  
-    for (j in 1:length(ctyNames)) { #j is the row number of regions 
-    
-# metric: income share of food expenditures -------------------------------
-  
-  ## calculate how much is spent per day on IMPACT commodities (budget) and its share of per capita income (incomeShare), 
-  ## using domestic and world prices
-      
-      tmp.perCapFood <- f.perCapFood(i,rgn = ctyNames[j])
+Pw <- ddply(t1.food[t1.food$IMPACTparameter == "Pw",],
+            .(scenario,IMPACT_code,year),
+            summarise,
+            Pw=mean(value))
 
-      budget.Pw <- colSums(data.frame(mapply(`*`,tmp.perCapFood[,2:47],Pw.wide[,2:47])))/365/1000
-      
-      budget.Pcon <- colSums(data.frame(mapply(`*`,tmp.perCapFood[,2:47],
-                                               f.Pcon(i,rgn = ctyNames[j])[,2:47])))/365/1000
+df0 <- ddply(t1.food[t1.food$IMPACTparameter == "pcFoodAvail",],
+             .(scenario,region,IMPACT_code,year),
+             summarise,
+             food=mean(value))
 
-      incomeShare.Pw <- data.frame(mapply(`/`,(budget.Pw[,2:47],
-                                               (f.perCapGDP(i,rgn = ctyNames[j])[,2:47]) * 1000/365
-      
-          incomeShare.Pw <- budget.Pw / ((f.perCapGDP(i,rgn = ctyNames[j]) * 1000)/365)
-      incomeShare.Pcon <- budget.Pcon /  ((f.perCapGDP(i,rgn = ctyNames[j]) * 1000)/365)
-      
-    } # end of loop to calculate budget cost and income share for a region
-  } #end of loop over regions
+df0 <- join(df0,Pw)
+
+Pc <- ddply(t1.food[t1.food$IMPACTparameter == "Pc",],
+            .(scenario,region,IMPACT_code,year),
+            summarise,
+            Pc=mean(value))
+
+df0 <- join(df0,Pc)
+
+budget <- ddply(df0,
+                .(scenario,region,year),
+                summarise,
+                budget.Pw=sum(food * Pw)/365/1000,
+                budget.Pc=sum(food * Pc)/365/1000)
+
+incomeShare <-join(t1.pcGDP,budget)
+incomeShare$Pw <- incomeShare$budget.Pw / ((incomeShare$value * 1000)/365)
+incomeShare$Pc <- incomeShare$budget.Pc / ((incomeShare$value * 1000)/365)
+incomeShare <- incomeShare[,c("scenario","region","year","Pw","Pc")]
   
   #write results to the spreadsheet
   shtName <- paste("Budget Pw",i,sep="")
