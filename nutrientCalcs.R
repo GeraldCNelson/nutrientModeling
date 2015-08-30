@@ -17,7 +17,8 @@ library(openxlsx)
 library(entropy)
 library(dplyr)
 library(reshape2)
-library(plyr); library(dplyr)
+library(plyr)
+library(dplyr)
 library(tidyr)
 setwd("~/Documents/workspace/nutrientModeling")
 
@@ -74,7 +75,7 @@ t1.food$IMPACTparameter <- gsub("QBFXAgg -- Biofuel Feedstock Demand","bioFuelD"
 t1.food$IMPACTparameter <- gsub("QINTXAgg -- Intermediate Demand","intermedD",t1.food$IMPACTparameter)
 t1.food$IMPACTparameter <- gsub("PCXAgg -- Consumer Prices","Pc",t1.food$IMPACTparameter)
 #set up excel output
-source(worksheetCreation.R)
+source("workSheetCreation.R")
 
 #create a worksheet with info on creator, date, model version, etc.
 creationInfo <- ("Information on creator, date, model version, etc.")
@@ -184,6 +185,20 @@ incomeShare <-join(t1.pcGDP,budget)
 incomeShare$Pw <- incomeShare$budget.Pw / ((incomeShare$value * 1000)/365)
 incomeShare$Pc <- incomeShare$budget.Pc / ((incomeShare$value * 1000)/365)
 incomeShare <- incomeShare[,c("scenario","region","year","Pw","Pc")]
+#nutrient stuff
+df0 <- join(df0,foodGroupsInfo)
+
+nutChoice <- "protein"
+includes <- c("IMPACT_code", nutChoice)
+tmp.nut <- nutrients[, (names(nutrients) %in% includes)]
+
+df0 <- join(df0,tmp.nut)
+
+proteinShare <- ddply(df0,
+                .(scenario,region,food.group.code,year),
+                summarise,
+             df0$protein*df0$food)
+            
   
   #write results to the spreadsheet
   shtName <- paste("Budget Pw",i,sep="")

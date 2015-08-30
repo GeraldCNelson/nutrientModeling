@@ -59,12 +59,15 @@ allFoodGroups <- unique(foodGroupsInfo$food.group.code)
 #              "ZINC","COPR","MNGN","VITA","VITD","VITE","VITC","THIAM","RIBF","NIAC","VITB6","FOLC",
 #              "VITB12","PANTO") 
 
-nutCodes <- c("water", "energy", "protein", "fat", "carbohydrate", "fiber", "sugar", "minerals",	
-              "calcium", "iron", "magnesium", "phosphorus", "potassium", "sodium", "zinc","vitamins",	
+#the following codes are available but not being used right now. 
+nutCodesExcluded <- c( "water", "vitamins",	"lipids", "fatty_acids_tot_sat", "fatty_acids_mono_unsat", "fatty_acids_polyunsat",	
+                      "cholesterol")
+nutCodes <- c( "energy", "protein", "fat", "carbohydrate", "fiber", "sugar", 	
+              "calcium", "iron", "magnesium", "phosphorus", "potassium", "sodium", "zinc",	
               "vitamin_c", "thiamin",	"riboflavin",	"niacin", "vitamin_b6",	"folate", "vitamin_b12",	
               "vitamin_a_RAE", 	"vitamin_a_IU",	"vitamin_e", "vitamin_d2_3", "vitamin_d",	"vitamin_k",
               "lipids", "fatty_acids_tot_sat", "fatty_acids_mono_unsat", "fatty_acids_polyunsat",	
-              "cholesterol", "other", "caffeine", "fatty_acids_tot_trans")
+              "cholesterol")
 
 nutrients <- read.xlsx(nutrientFileName, 
                        sheet = 1,
@@ -77,23 +80,23 @@ nutrientNames_Units <- read.xlsx(nutrientFileName,
                                  cols = 10:46,
                                  colNames = FALSE)
 
-#convert the NAs to 0 except in the first 5 columns which are text fields
-temp <- nutrients[,6:ncol(nutrients)]
-temp[is.na(temp)] <- 0
-nutrients[,6:ncol(nutrients)] <- temp
+#convert NAs to 1 for edible_share and IMPACT_conversion
+nutrients[c("IMPACT_conversion","edible_share")][is.na(nutrients[c("IMPACT_conversion","edible_share")])] <- 1
+
+#convert the NAs to 0  in the nutrients columns 
+nutrients[,nutCodes][is.na(nutrients[,nutCodes])] <- 0
 
 # change nutrient unit from 100 gm to 1 kg
 nutrients[,nutCodes] <- nutrients[,nutCodes] * 10
 
 # convert to IMPACT unit equivalents (nutrients per carcass weight for meat)
-nutrients[,nutCodes] <- 
-  nutrients[,nutCodes] * nutrients[,"IMPACT_conversion"]
-nutrients[,nutCodes] * nutrients[,"edible_share"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"IMPACT_conversion"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"edible_share"]
 
 #include only columns that are needed; IMPACT code and nutrient names
 includes <- c("IMPACT_code", nutCodes)
-
 nutrients <- nutrients[, (names(nutrients) %in% includes)]
+
 #add food groups to nutrients in a column called category
 tmp <- foodGroupsInfo[,c("IMPACT_code","food.group.code")]
 nutrients <- merge(nutrients, tmp, by = "IMPACT_code")
