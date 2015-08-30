@@ -15,7 +15,6 @@
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 library(openxlsx)
 library(entropy)
-library(dplyr)
 library(reshape2)
 library(plyr)
 library(dplyr)
@@ -194,11 +193,19 @@ tmp.nut <- nutrients[, (names(nutrients) %in% includes)]
 
 df0 <- join(df0,tmp.nut)
 
-proteinShare <- ddply(df0,
-                .(scenario,region,food.group.code,year),
-                summarise,
-             df0$protein*df0$food)
-            
+#this doesn't work
+# proteinShare <- ddply(df0,
+#                       .(scenario,region,food.group.code,year),
+#                       summarise,
+#                       sum(df0$protein*df0$food))
+
+#This seems to but I'm not sure what I have
+df0$proteinshare <- df0$protein * df0$food
+proteinShare <- df0[,c("scenario","region","year","food.group.code","proteinshare")]
+tmp <- ddply(proteinShare,
+                      .(scenario,region,food.group.code,year),
+                      summarise,
+                      outdata=sum(proteinshare))
   
   #write results to the spreadsheet
   shtName <- paste("Budget Pw",i,sep="")
