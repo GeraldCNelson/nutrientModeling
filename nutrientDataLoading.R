@@ -71,7 +71,7 @@ nutCodes <- c( "energy", "protein", "fat", "carbohydrate", "fiber", "sugar",
 
 nutrients <- read.xlsx(nutrientFileName, 
                        sheet = 1,
-                       rows = 3:46,
+                       rows = 3:50,
                        cols = 1:46,
                        colNames = TRUE)
 nutrientNames_Units <- read.xlsx(nutrientFileName, 
