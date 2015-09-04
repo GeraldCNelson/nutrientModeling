@@ -1,3 +1,5 @@
+# A 'subroutine' of nutrientCalcs.R
+# Contains some functions for reading in and manipulating data. May be superceded by newer code.
 f.perCapFood <- function(rgn, scen) {
   tmp <- t1.food[(t1.food$IMPACTparameter == "pcFoodAvail") & 
                    (t1.food$region == rgn) &

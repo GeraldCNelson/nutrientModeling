@@ -3,6 +3,7 @@
 #and writes out results to an excel spreadsheet
 
 #Copyright (C) 2015 Gerald C. Nelson, except where noted
+#Important code contributions from Brendan Power.
 
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -76,85 +77,6 @@ t1.food$IMPACTparameter <- gsub("PCXAgg -- Consumer Prices","Pc",t1.food$IMPACTp
 #set up excel output
 source("workSheetCreation.R")
 
-#create a worksheet with info on creator, date, model version, etc.
-creationInfo <- ("Information on creator, date, model version, etc.")
-creationInfo <- rbind(creationInfo, paste("Creator:", userName))
-creationInfo <- rbind(creationInfo, paste("Date of file creation:", dateCreated))
-creationInfo <- rbind(creationInfo, paste("IMPACT data:", IMPACTfileName))
-creationInfo <- rbind(creationInfo, paste("Nutrient data:", nutrientFileName))
-creationInfo <- rbind(creationInfo, paste("EAR data:", EARFileName))
-
-addWorksheet(wb, sheetName="creation_Info")
-writeData(wb, creationInfo, sheet="creation_Info", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
-wbInfo[(nrow(wbInfo)+1),] <- c("creation_Info", "Information on creator, date, model version, etc.")
-
-#create a worksheet with info on the regions
-addWorksheet(wb, sheetName="metadataRegions")
-wbInfo[(nrow(wbInfo)+1),] <- c("=HYPERLINK(#metadataRegions!A1,\"metadataRegions\")", "metadata on regions.")
-writeData(wb, IMPACTregions, sheet="metadataRegions", startRow=1, startCol=1, rowNames = FALSE)
-addStyle(wb, sheet="metadataRegions", 
-         style=textStyle, 
-         rows = 1:nrow(IMPACTregions), 
-         cols = 1:ncol(IMPACTregions), gridExpand = TRUE)
-#setColWidths(wb, sheet="metadataRegions", cols = 1:ncol(IMPACTregions), widths="auto")
-
-#create a worksheet with info on the commodities and nutrients
-addWorksheet(wb, sheetName="metadataFoodCommods")
-#commodityNames <- cbind(nutrients[c("Name","IMPACT_code")])
-writeData(wb, nutrients, sheet="metadataFoodCommods", startRow=1, startCol=1)
-#setColWidths(wb, sheet="metadataCommodities", cols = 1:3, widths="auto")
-wbInfo[(nrow(wbInfo)+1),] <- c("=HYPERLINK(#metadataFoodCommods!A1,\"metadataFoodCommods\")", "Metadata on commodities and their nutrient makeup.")
-
-#create a worksheet with info on the nutrients
-addWorksheet(wb, sheetName="metadataNutrients")
-writeData(wb, nutrientNames_Units, sheet="metadataNutrients", startRow=1, startCol=1, rowNames = FALSE,colNames = FALSE)
-wbInfo[(nrow(wbInfo)+1),] <- c("=HYPERLINK(#metadataNutrients!A1,\"metadataNutrients\")", 
-                               paste("Metadata on nutrient names and units, from the file ", nutrientFileName,sep=""))
-
-addWorksheet(wb, sheetName="metadataEARs")
-wbInfo[(nrow(wbInfo)+1),] <- c("=HYPERLINK(#metadataEARs!A1,\"metadataEARs\")", 
-                               paste("Metadata on EARs; units are the same as the nutrients metadata."))
-
-writeData(wb, EARs, sheet="metadataEARs", startRow=1, startCol=1, rowNames = FALSE)
-addStyle(wb, sheet="metadataEARs", style=numStyle, rows = 2:nrow(EARs)+1, cols=2:ncol(EARs), gridExpand = TRUE)
-#setColWidths(wb, sheet="metadataEARs", cols = 1:ncol(EARs), widths="auto")
-
-# Loop over scenario and region -------------------------------------------
-
-# for (i in c( "SSP2-NoCC", "SSP2-GFDL", "SSP2-MIROC")) {
-# 
-#   #world prices
-#   Pw.wide <- f.Pw(i)
-#   shtName <- paste("Pw_",i,sep="")
-#   addWorksheet(wb, sheetName=shtName)
-#   writeData(wb, Pw.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-#   hyperLinkVar <- paste('=HYPERLINK(',shtName,'!A1, \"',shtName,'\")', sep="")
-#   descVar <- paste("World prices, (2005 USD ppp per mt), scenario", i)
-#   wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
-#   
-#     for (j in 1:length(ctyNames)) { #j is the row number of regions 
-#     
-# # metric: income share of food expenditures -------------------------------
-#   
-#   ## calculate how much is spent per day on IMPACT commodities (budget) and its share of per capita income (incomeShare), 
-#   ## using domestic and world prices
-#       
-#       tmp.perCapFood <- f.perCapFood(i,rgn = ctyNames[j])
-# 
-#       budget.Pw <- colSums(data.frame(mapply(`*`,tmp.perCapFood[,2:47],Pw.wide[,2:47])))/365/1000
-#       
-#       budget.Pcon <- colSums(data.frame(mapply(`*`,tmp.perCapFood[,2:47],
-#                                                f.Pcon(i,rgn = ctyNames[j])[,2:47])))/365/1000
-# 
-#       incomeShare.Pw <- data.frame(mapply(`/`,(budget.Pw[,2:47],
-#                                                (f.perCapGDP(i,rgn = ctyNames[j])[,2:47]) * 1000/365
-#       
-#           incomeShare.Pw <- budget.Pw / ((f.perCapGDP(i,rgn = ctyNames[j]) * 1000)/365)
-#       incomeShare.Pcon <- budget.Pcon /  ((f.perCapGDP(i,rgn = ctyNames[j]) * 1000)/365)
-      
-#     } # end of loop to calculate budget cost and income share for a region
-#   } #end of loop over regions
-
 Pw <- ddply(t1.food[t1.food$IMPACTparameter == "Pw",],
             .(scenario,IMPACT_code,year),
             summarise,
@@ -165,47 +87,47 @@ df0 <- ddply(t1.food[t1.food$IMPACTparameter == "pcFoodAvail",],
              summarise,
              food=mean(value))
 
-df0 <- join(df0,Pw)
+df1 <- join(df0,Pw)
 
 Pc <- ddply(t1.food[t1.food$IMPACTparameter == "Pc",],
             .(scenario,region,IMPACT_code,year),
             summarise,
             Pc=mean(value))
 
-df0 <- join(df0,Pc)
+df2 <- join(df1,Pc)
 
-budget <- ddply(df0,
+budget <- ddply(df2,
                 .(scenario,region,year),
                 summarise,
                 budget.Pw=sum(food * Pw)/365/1000,
                 budget.Pc=sum(food * Pc)/365/1000)
 
+
+save.image()
+
 incomeShare <-join(t1.pcGDP,budget)
 incomeShare$Pw <- incomeShare$budget.Pw / ((incomeShare$value * 1000)/365)
 incomeShare$Pc <- incomeShare$budget.Pc / ((incomeShare$value * 1000)/365)
 incomeShare <- incomeShare[,c("scenario","region","year","Pw","Pc")]
+
 #nutrient stuff
-df0 <- join(df0,foodGroupsInfo)
+df3 <- join(df2,foodGroupsInfo)
 
-nutChoice <- "protein"
-includes <- c("IMPACT_code", nutChoice)
-tmp.nut <- nutrients[, (names(nutrients) %in% includes)]
+nutrients.df <- gather(nutrients,nutrient,nut.value,energy:cholesterol)
+# nutChoice <- "protein"
+# includes <- c("IMPACT_code", nutChoice)
+# tmp.nut <- nutrients[, (names(nutrients) %in% includes)]
+# 
+# df0 <- join(df0,tmp.nut)
+df4 <- join(df0,nutrients.df)
 
-df0 <- join(df0,tmp.nut)
 
-#this doesn't work
-# proteinShare <- ddply(df0,
-#                       .(scenario,region,food.group.code,year),
-#                       summarise,
-#                       sum(df0$protein*df0$food))
+nutShare <- ddply(df4,
+                  .(scenario,region,food.group.code,year,nutrient),
+                  summarise,
+                  value=sum(nut.value*food))
 
-#This seems to but I'm not sure what I have
-df0$proteinshare <- df0$protein * df0$food
-proteinShare <- df0[,c("scenario","region","year","food.group.code","proteinshare")]
-tmp <- ddply(proteinShare,
-                      .(scenario,region,food.group.code,year),
-                      summarise,
-                      outdata=sum(proteinshare))
+save(nutShare,file="nutShare.RData",compress = T)
   
   #write results to the spreadsheet
   shtName <- paste("Budget Pw",i,sep="")

@@ -1,5 +1,5 @@
-
-# Data loading file for nutrientCalcs -------------------------------------
+# A 'subroutine' of nutrientCalcs.R
+# Data loading code for nutrientCalcs -------------------------------------
 nutrientFileName <- "data/USDA GFS IMPACT V5.xlsx"
 IMPACTfileName <- "data/IMPACTData/Demand Results20150817.csv"
 EARFileName <- "data/DRI EAR valuesV2.xlsx"
