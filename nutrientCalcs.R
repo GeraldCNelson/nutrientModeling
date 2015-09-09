@@ -20,6 +20,7 @@ library(reshape2)
 library(plyr)
 library(dplyr)
 library(tidyr)
+library(data.table)
 setwd("~/Documents/workspace/nutrientModeling")
 
 # Info for the basic worksheet ---------------------------------------
@@ -94,6 +95,12 @@ Pc <- ddply(t1.food[t1.food$IMPACTparameter == "Pc",],
             summarise,
             Pc=mean(value))
 
+#an alternative to the above
+# dt.PC <- as.data.table(t1.food[t1.food$IMPACTparameter == "Pc",])
+# setkey(dt.PC,"scenario","region","IMPACT_code","year")
+# dt.PC[,PC:=mean(value),by=key(dt.PC)]
+# PC <- as.data.frame(unique(dt.PC[,c("scenario","region","IMPACT_code","year","PC"),with=F]))
+
 df2 <- join(df1,Pc)
 
 budget <- ddply(df2,
@@ -128,6 +135,9 @@ nutShare <- ddply(df4,
                   value=sum(nut.value*food))
 
 save(nutShare,file="nutShare.RData",compress = T)
+
+save.image(file = "test.RData")
+
   
   #write results to the spreadsheet
   shtName <- paste("Budget Pw",i,sep="")

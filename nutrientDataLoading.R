@@ -69,6 +69,12 @@ nutCodes <- c( "energy", "protein", "fat", "carbohydrate", "fiber", "sugar",
               "lipids", "fatty_acids_tot_sat", "fatty_acids_mono_unsat", "fatty_acids_polyunsat",	
               "cholesterol")
 
+nutCodesforAnalysis <- c( "energy", "protein", "fat", "carbohydrate", "sugar", 	
+                          "calcium", "iron", "magnesium", "potassium", "sodium", "zinc",	
+                          "vitamin_c", "thiamin",	"riboflavin",	"niacin", "vitamin_b6",	"folate", "vitamin_b12",	
+                          "vitamin_a_RAE", 	"vitamin_a_IU",	"vitamin_e", "vitamin_d2_3", "vitamin_d",	
+                          "fatty_acids_tot_sat", "cholesterol")
+
 nutrients <- read.xlsx(nutrientFileName, 
                        sheet = 1,
                        rows = 3:50,
