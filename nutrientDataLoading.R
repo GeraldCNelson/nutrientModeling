@@ -100,7 +100,7 @@ nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"IMPACT_conversion"]
 nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"edible_share"]
 
 #include only columns that are needed; IMPACT code and nutrient names
-includes <- c("IMPACT_code", nutCodes)
+includes <- c("IMPACT_code", nutCodesforAnalysis)
 nutrients <- nutrients[, (names(nutrients) %in% includes)]
 
 #add food groups to nutrients in a column called category
