@@ -43,6 +43,7 @@ addStyle(wb, sheet="metadataRegions",
 #setColWidths(wb, sheet="metadataRegions", cols = 1:ncol(IMPACTregions), widths="auto")
 
 #create a worksheet with info on the commodities and nutrients
+
 addWorksheet(wb, sheetName="metadataFoodCommods")
 #commodityNames <- cbind(nutrients[c("Name","IMPACT_code")])
 writeData(wb, nutrients, sheet="metadataFoodCommods", startRow=1, startCol=1)
@@ -62,3 +63,35 @@ wbInfo[(nrow(wbInfo)+1),] <- c("=HYPERLINK(#metadataEARs!A1,\"metadataEARs\")",
 writeData(wb, EARs, sheet="metadataEARs", startRow=1, startCol=1, rowNames = FALSE)
 addStyle(wb, sheet="metadataEARs", style=numStyle, rows = 2:nrow(EARs)+1, cols=2:ncol(EARs), gridExpand = TRUE)
 #setColWidths(wb, sheet="metadataEARs", cols = 1:ncol(EARs), widths="auto")
+
+f.write.xls.sheet <- function(temp,wb) { 
+  #temp contains rows for one scenario, food.group,code, and nutrient, all regions and all years
+  #wb is the spreadsheet file set up in workSheetCreation.R
+  #wbInfo is used to create the metadata sheet
+  shtName <- paste(unique(temp$scenario),
+                   unique(temp$food.group.code),
+                   unique(temp$nutrient), sep="_")
+  shtName <- substr(shtName,1,31) #sheetnames in xls must be <= 31
+  temp.wide <- spread(temp[,c("region","year","value")], year,value)
+  addWorksheet(wb, sheetName=shtName)
+  writeData(wb, temp.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  wbInfo[(nrow(wbInfo)+1),] <- c(shtName,paste("average daily consumption of ",temp$nutrient))
+print(shtName)
+}  
+debugonce(f.write.xls.sheet)
+by(nutShare,nutShare[,c("scenario","food.group.code","nutrient")],f.write.xls.sheet,wb)
+
+#convert wbInfo sheet_Name column to class hyperlink
+class(wbInfo$sheet_Name) <- 'hyperlink'
+#add sheet with info about each of the worksheets
+addWorksheet(wb, sheetName="sheetInfo")
+writeData(wb, wbInfo, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+addStyle(wb, sheet="sheetInfo", style=textStyle, rows = 1:nrow(wbInfo), cols=1:(ncol(wbInfo)), gridExpand = TRUE)
+setColWidths(wb, sheet="sheetInfo", cols = 1:2, widths=20)
+
+#move sheetInfo worksheet from the last to the first
+temp<- 2:length(names(wb))-1
+temp <- c(length(names(wb)),temp)
+worksheetOrder(wb) <- temp
+
+saveWorkbook(wb, xcelOutFileName, overwrite = TRUE)

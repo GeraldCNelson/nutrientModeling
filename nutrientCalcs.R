@@ -33,7 +33,9 @@ dateCreated <- Sys.Date()
 # Load functions for the rest of the script
 source(file="nutrientFunctions.R")
 #Read in data
-source(file="nutrientDataLoading.R")
+source(file ="IMPACTdataLoading.R")
+source(file = "nutrientDataLoading.R")
+source(file = "EARfoodGroupCSELoading.R")
 
 # Parameter,Description,csv IMPACT parameters,my short name
 # FoodAvailability,Food availability per capita (kg per person),FoodAvailXAgg,pcFoodAvail
@@ -75,8 +77,6 @@ t1.food$IMPACTparameter <- gsub("PerCapKCalCXAgg -- PcKcal by Commodity","pcKcal
 t1.food$IMPACTparameter <- gsub("QBFXAgg -- Biofuel Feedstock Demand","bioFuelD",t1.food$IMPACTparameter)
 t1.food$IMPACTparameter <- gsub("QINTXAgg -- Intermediate Demand","intermedD",t1.food$IMPACTparameter)
 t1.food$IMPACTparameter <- gsub("PCXAgg -- Consumer Prices","Pc",t1.food$IMPACTparameter)
-#set up excel output
-source("workSheetCreation.R")
 
 Pw <- ddply(t1.food[t1.food$IMPACTparameter == "Pw",],
             .(scenario,IMPACT_code,year),
@@ -90,99 +90,80 @@ df0 <- ddply(t1.food[t1.food$IMPACTparameter == "pcFoodAvail",],
 
 df1 <- join(df0,Pw)
 
-Pc <- ddply(t1.food[t1.food$IMPACTparameter == "Pc",],
-            .(scenario,region,IMPACT_code,year),
-            summarise,
-            Pc=mean(value))
+# Pc <- ddply(t1.food[t1.food$IMPACTparameter == "Pc",],
+#             .(scenario,region,IMPACT_code,year),
+#             summarise,
+#             Pc=mean(value))
 
 #an alternative to the above
-# dt.PC <- as.data.table(t1.food[t1.food$IMPACTparameter == "Pc",])
-# setkey(dt.PC,"scenario","region","IMPACT_code","year")
-# dt.PC[,PC:=mean(value),by=key(dt.PC)]
-# PC <- as.data.frame(unique(dt.PC[,c("scenario","region","IMPACT_code","year","PC"),with=F]))
+dt.Pc <- as.data.table(t1.food[t1.food$IMPACTparameter == "Pc",])
+setkey(dt.Pc,"scenario","region","IMPACT_code","year")
+dt.Pc[,Pc:=mean(value),by=key(dt.Pc)]
+Pc <- as.data.frame(unique(dt.Pc[,c("scenario","region","IMPACT_code","year","Pc"),with=F]))
 
 df2 <- join(df1,Pc)
 
-budget <- ddply(df2,
+names(CSEs)[1] <- "region"
+df3 <- join(df2,CSEs)
+df3[is.na(df3)] <- 0
+
+budget <- ddply(df3,
                 .(scenario,region,year),
                 summarise,
                 budget.Pw=sum(food * Pw)/365/1000,
-                budget.Pc=sum(food * Pc)/365/1000)
-
+                budget.Pc=sum(food * Pc)/365/1000,
+                budget.Pcon=sum(food * Pc * (1-CSE))/365/1000)
 
 save.image()
 
 incomeShare <-join(t1.pcGDP,budget)
 incomeShare$Pw <- incomeShare$budget.Pw / ((incomeShare$value * 1000)/365)
 incomeShare$Pc <- incomeShare$budget.Pc / ((incomeShare$value * 1000)/365)
-incomeShare <- incomeShare[,c("scenario","region","year","Pw","Pc")]
+incomeShare$Pcon <- incomeShare$budget.Pcon / ((incomeShare$value * 1000)/365)
+incomeShare <- incomeShare[,c("scenario","region","year","Pw","Pc","Pcon")]
 
 #nutrient stuff
-df3 <- join(df2,foodGroupsInfo)
+#include only columns that are needed; IMPACT code and nutrient names
+#choices are 
+# - all - all relevant nutrients, 23
+# - macro - "energy", "protein", "fat", "carbohydrate", "fiber", "sugar"
+# - minerals - "calcium", "iron", "potassium", "sodium", "zinc"
+# - vitamins - "vitamin_c", "thiamin",	"riboflavin",	"niacin", "vitamin_b6",	"folate", "vitamin_b12",
+#   "vitamin_a_RAE", 	"vitamin_e", "vitamin_d2_3"
+# - fattyAcids - "fatty_acids_tot_sat", "fatty_acids_polyunsat"
+# next line is where the choice is made
+short.name <- c("minerals")
+nut.list <- eval(parse(text = short.name))
+includes <- c("IMPACT_code", nut.list)
+nuts.reduced <- nutrients[, (names(nutrients) %in% includes)]
 
-nutrients.df <- gather(nutrients,nutrient,nut.value,energy:cholesterol)
-# nutChoice <- "protein"
-# includes <- c("IMPACT_code", nutChoice)
-# tmp.nut <- nutrients[, (names(nutrients) %in% includes)]
+df3 <- join(df2[,c("scenario","region","IMPACT_code","year","food")],foodGroupsInfo)
+df3 <- df3[,c("scenario","region","IMPACT_code","year","food","food.group.code")]
+
+#nutrients.df <- gather(nutrients,nutrient,nut.value,energy:fatty_acids_polyunsat)
+tmp <- length(list.current)
+nutrients.df <- gather(nuts.reduced,nutrient,nut.value,
+                       eval(parse(text = nut.list[1])):eval(parse(text = nut.list[tmp])))
+
 # 
 # df0 <- join(df0,tmp.nut)
-df4 <- join(df0,nutrients.df)
+df4 <- join(df3,nutrients.df)
 
+df4 <- data.table(df4)
 
-nutShare <- ddply(df4,
+t4 = system.time(nutShare <- ddply(df4,
                   .(scenario,region,food.group.code,year,nutrient),
                   summarise,
-                  value=sum(nut.value*food))
+                  value=sum(nut.value*food)))
 
-save(nutShare,file="nutShare.RData",compress = T)
+#create excel output
+xcelOutFileName <- paste("results/nutVals_",short.name,dateCreated,".xlsx",sep="")
+source("workSheetCreation.R")
 
-save.image(file = "test.RData")
+# save(nutShare,file=paste("nutVals_",short.name,dateCreated,".RData",sep=""),compress = T)
+# 
+# save.image(file = "test.RData")
 
-  
-  #write results to the spreadsheet
-  shtName <- paste("Budget Pw",i,sep="")
-  addWorksheet(wb, sheetName=shtName)
-  writeData(wb, budget.Pw, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  hyperLinkVar <- paste('=HYPERLINK(#',shtName,'!A1, \"',shtName,'\")', sep="")
-  descVar <- paste("World prices, (2005 USD ppp per mt), scenario", i)
-  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
-  
-  shtName <- paste("Budget Pc",i,sep="")
-  addWorksheet(wb, sheetName=shtName)
-  writeData(wb, budget.Pc, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  hyperLinkVar <- paste('=HYPERLINK(#',shtName,'!A1, \"',shtName,'\")', sep="")
-  descVar <- paste("Expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i)
-  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
-  
-  shtName <- paste("IncomeShare Pw",i,sep="")
-  addWorksheet(wb, sheetName=shtName)
-  writeData(wb, incomeShare.Pw, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  hyperLinkVar <- paste('=HYPERLINK(#',shtName,'!A1, \"',shtName,'\")', sep="")
-  descVar <- paste("Income share of expenditures on IMPACT commodities at world prices, (2005 USD ppp per day), scenario", i)
-  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
-  
-  shtName <- paste("IncomeShare Pc",i,sep="")
-  addWorksheet(wb, sheetName=shtName)
-  writeData(wb, incomeShare.Pc, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  hyperLinkVar <- paste('=HYPERLINK(#',shtName,'!A1, \"',shtName,'\")', sep="")
-  descVar <- paste("Income share of expenditures on IMPACT commodities at domestic prices, (2005 USD ppp per day), scenario", i)
-  wbInfo[(nrow(wbInfo)+1),] <- c(hyperLinkVar, descVar)
-  
-  } #end of loop over scenarios
-
-#convert wbInfo sheet_Name column to class hyperlink
-class(wbInfo$sheet_Name) <- 'hyperlink'
-#add sheet with info about each of the worksheets
-addWorksheet(wb, sheetName="sheetInfo")
-writeData(wb, wbInfo, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
-addStyle(wb, sheet="sheetInfo", style=textStyle, rows = 1:nrow(wbInfo), cols=1:(ncol(wbInfo)), gridExpand = TRUE)
-setColWidths(wb, sheet="sheetInfo", cols = 1:2, widths=20)
-
-#move sheetInfo worksheet from the last to the first
-temp<- 2:length(names(wb))-1
-temp <- c(length(names(wb)),temp)
-worksheetOrder(wb) <- temp
-saveWorkbook(wb, xcelOutFileName, overwrite = TRUE)
 
 # metric: Share of EAR consumed for the nutrients in nutCodes -------------
 
