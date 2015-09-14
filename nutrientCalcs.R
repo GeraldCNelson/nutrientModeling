@@ -114,7 +114,6 @@ budget <- ddply(df3,
                 budget.Pc=sum(food * Pc)/365/1000,
                 budget.Pcon=sum(food * Pc * (1-CSE))/365/1000)
 
-save.image()
 
 incomeShare <-join(t1.pcGDP,budget)
 incomeShare$Pw <- incomeShare$budget.Pw / ((incomeShare$value * 1000)/365)
@@ -156,8 +155,14 @@ t4 = system.time(nutShare <- ddply(df4,
                   summarise,
                   value=sum(nut.value*food)))
 
+nutShareTot <- ddply(df4,
+                  .(scenario,region,year,nutrient),
+                  summarise,
+                  value=sum(nut.value*food))
+save.image()
+
 #create excel output
-xcelOutFileName <- paste("results/nutVals_",short.name,dateCreated,".xlsx",sep="")
+xcelOutFileName <- paste("results/nutVals_",short.name,Sys.Date(),".xlsx",sep="")
 source("workSheetCreation.R")
 
 # save(nutShare,file=paste("nutVals_",short.name,dateCreated,".RData",sep=""),compress = T)
@@ -172,10 +177,8 @@ source("workSheetCreation.R")
 # RDAs <- read.xlsx(RDAFile, colNames = TRUE,sheet = 1, startRow = 1)
 # RDAs <- RDAs[,2:4]
 
-#test function inputs
-# rgn <- ctyNames[2]
-# yr <- "X2010"
-# cat <- "allFoodGroups"
+# -- the code below here is from an earlier version. 
+# Some of it may be useful but I haven't looked at it in a couple of months.
 
 f.regionCmdty <- function(rgn, scen)
 {
