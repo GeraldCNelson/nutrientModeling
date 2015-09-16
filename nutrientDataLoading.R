@@ -9,7 +9,8 @@ nutrientFileName <- "data/USDA GFS IMPACT V5.xlsx"
 #              "VITB12","PANTO") 
 
 #the following codes are available but not being used right now. 
-nutCodesExcluded <- c( "water", "vitamins",	"lipids", "fatty_acids_tot_sat", "fatty_acids_mono_unsat", "fatty_acids_polyunsat",	
+nutCodesExcluded <- c( "water", "vitamins",	"lipids", "fatty_acids_tot_sat", "fatty_acids_mono_unsat", 
+                       "fatty_acids_polyunsat", "fatty_acids_tot_trans","other","vitamins"
                       "cholesterol")
 nutCodes <- c( "energy", "protein", "fat", "carbohydrate", "fiber", "sugar", 	
               "calcium", "iron", "magnesium", "phosphorus", "potassium", "sodium", "zinc",	

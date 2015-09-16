@@ -38,7 +38,7 @@ source(file = "nutrientDataLoading.R")
 source(file = "EARfoodGroupCSELoading.R")
 
 # Parameter,Description,csv IMPACT parameters,my short name
-# FoodAvailability,Food availability per capita (kg per person),FoodAvailXAgg,pcFoodAvail
+# FoodAvailability,Food availability per capita (kg per person per year),FoodAvailXAgg,pcFoodAvail
 # GDPX0,Final GDP (billion 2005 USD ppp), NA
 # pcGDPX0,Final per capita GDP (000 USD per person ppp),pcGDPXAgg -- Per Capita Income,pcGDP
 # PCX0,Solution consumer prices (2005 USD ppp per mt)        ,PCXAgg -- Consumer Prices,Pc
@@ -146,10 +146,12 @@ nutrients.df <- gather(nuts.reduced,nutrient,nut.value,
 
 # 
 # df0 <- join(df0,tmp.nut)
-df4 <- join(df3,nutrients.df)
+df4.year <- join(df3,nutrients.df)
 
 df4 <- data.table(df4)
 
+#convert from annual availability to daily availability
+df4$food <- df4$food/365
 t4 = system.time(nutShare <- ddply(df4,
                   .(scenario,region,food.group.code,year,nutrient),
                   summarise,

@@ -43,7 +43,7 @@ colnames(CSEs) <- c("cty","IMPACT_code","CSE")
 EARs <- read.xlsx(EARFileName, sheet = 1, startRow = 3, colNames = FALSE)
 #make sure everything that should be numeric, is
 for (j in 3:length(EARs)) (EARs[j] <- as.numeric(EARs[,j]))
-#give the columns some names
+#give the columns some names, M - Male, F- Female, X - children of both genders, P - pregnant, L - lactating
 colnames(EARs) <- c("NutCode","nutNames.Units","X0_0.5","X0.5_1","X1_3","X4_8",
                     "M9_13","M14_18","M19_30","M_31_50","M51_70","M70Plus",
                     "F9_13","F14_18","F19_30","F_31_50","F51_70","F70Plus",
