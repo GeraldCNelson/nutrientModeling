@@ -6,7 +6,7 @@ f.hyperlink <- function(sheetName,shtDesc) {
   tmp <- paste(part1, part2, sep="")
 }
 
-f.finalizeWB <- function(wb,wbInf) {
+f.finalizeWB <- function(wb,wbInf,nut.name) {
   #add sheet with info about each of the worksheets
   addWorksheet(wb, sheetName="sheetInfo")
   writeData(wb, wbInf, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
@@ -17,26 +17,40 @@ f.finalizeWB <- function(wb,wbInf) {
   temp<- 2:length(names(wb))-1
   temp <- c(length(names(wb)),temp)
   worksheetOrder(wb) <- temp
+  xcelOutFileName <- paste("results/nutVals_",nut.name,Sys.Date(),".xlsx",sep="")
   
   saveWorkbook(wb, xcelOutFileName, overwrite = TRUE)
 }
 
-f.write.nut.sheet <- function(temp,wb, wbInf) { 
-  #temp contains rows for one scenario, food.group,code, and nutrient, all regions and all years
+f.write.nut.sheet <- function(nutdf,wb) { 
+  #nutdf contains rows for one scenario, food.group,code, and nutrient, all regions and all years
   #wb is the spreadsheet file set up in workSheetCreation.R
   #wbInfo is used to create the metadata sheet
-  shtName <- paste(unique(temp$scenario),
-                   unique(temp$food.group.code),
-                   unique(temp$nutrient), sep="_")
+  shtName <- paste(unique(nutdf$scenario),
+                   unique(nutdf$food.group.code),
+                   unique(nutdf$nutrient), sep="_")
   shtName <- substr(shtName,1,31) #sheetnames in xls must be <= 31
-  temp.wide <- spread(temp[,c("region","year","value")], year,value)
+  nutdf.wide <- spread(nutdf[,c("region","year","value")], year,value)
   addWorksheet(wb, sheetName=shtName)
-  writeData(wb, temp.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  writeData(wb, nutdf.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  return(c(shtName,paste("Average daily consumption of",
+                         (unique(nutdf$nutrient)), "in scenario",
+                         (unique(nutdf$scenario)), "and food group",
+                         (unique(nutdf$food.group.code)), sep = " ")))
+}  
+
+f.write.nut.sum.sheet <- function(nutdf,wb) { 
+  #nutdf contains rows for one scenario, food.group,code, and nutrient, all regions and all years
+  #wb is the spreadsheet file set up in workSheetCreation.R
+  #wbInfo is used to create the metadata sheet
+  shtName <- paste(unique(nutdf$scenario),
+                   unique(nutdf$nutrient), sep="_")
+  shtName <- substr(shtName,1,31) #sheetnames in xls must be <= 31
+  nutdf.wide <- spread(nutdf[,c("region","year","value")], year,value)
+  addWorksheet(wb, sheetName=shtName)
+  writeData(wb, nutdf.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
   # the <<- structure below is supposed to allow one to access a global variable such as wbInfo
-  wbInf[(nrow(wbInf)+1),] <- c(shtName,
-                               paste("Average daily consumption of",
-                                     (unique(temp$nutrient)), "in scenario",
-                                     (unique(temp$scenario)), "and food group",
-                                     (unique(temp$food.group.code)), sep = " "))
-  return(wbInf)
+ return(c(shtName, paste("Average daily consumption of",
+                                     (unique(nutdf$nutrient)), "in scenario",
+                                     (unique(nutdf$scenario)), sep = " ")))
 }  

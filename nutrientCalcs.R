@@ -162,7 +162,6 @@ nutShareTot <- ddply(df4,
 save.image()
 
 #create excel output
-xcelOutFileName <- paste("results/nutVals_",short.name,Sys.Date(),".xlsx",sep="")
 source("workSheetCreation.R")
 
 # save(nutShare,file=paste("nutVals_",short.name,dateCreated,".RData",sep=""),compress = T)

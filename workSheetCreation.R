@@ -8,7 +8,7 @@ textStyle <- createStyle(fontName = NULL, fontSize = NULL, fontColour = NULL,
                          numFmt = "GENERAL", border = NULL,
                          borderColour = getOption("openxlsx.borderColour", "black"),
                          borderStyle = getOption("openxlsx.borderStyle", "thin"), bgFill = NULL,
-                         fgFill = NULL, halign = NULL, valign = NULL, textDecoration = NULL,
+                         fgFill = NULL, halign = "left", valign = NULL, textDecoration = NULL,
                          wrapText = FALSE, textRotation = NULL)
 
 source("workBookFunctions.R")
@@ -66,8 +66,16 @@ addStyle(wbGeneral, sheet="metadataEARs", style=numStyle, rows = 2:nrow(EARs)+1,
 setColWidths(wbGeneral, sheet="metadataEARs", cols = 1:ncol(EARs), widths="auto")
 
 #spreadsheet to output nutrition quantities
+wbNut <- createWorkbook()
 wbNut <- wbGeneral
 wbInfNut <- wbInfoGeneral
-by(nutShare,nutShare[,c("food.group.code","nutrient","scenario")],f.write.nut.sheet,wbNut,wbInfNut)
+tmp.out <- by(nutShare,nutShare[,c("food.group.code","nutrient","scenario")],f.write.nut.sheet,wbNut)
 
-f.finalizeWB(wbNut,wbInfNut)
+f.finalizeWB(wbNut,wbInfNut,short.name)
+
+#write out spreadsheet for nutrient consumption summary
+wbNutsum <- wbGeneral
+wbInfsum <- wbInfoGeneral
+tmp.sum.out <- by(nutShareTot,nutShareTot[,c("nutrient","scenario")],f.write.nut.sum.sheet(nutdf = nutShareTot, wb = wbNutsum))
+f.finalizeWB(wb = wbNutsum,wbInf = wbInfsum,nut.name = paste(short.name,"Sum",sep="_"))
+
