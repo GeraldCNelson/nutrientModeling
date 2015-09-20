@@ -1,4 +1,5 @@
-#function to create the first, commond worksheets
+
+#function to create the first, common worksheets in the results workbook
 f.createGeneralWorksheet <- function() {
   numStyle <- createStyle(numFmt = "0.0")
   numStyle3 <- createStyle(numFmt = "0.000")
@@ -10,7 +11,6 @@ f.createGeneralWorksheet <- function() {
                            fgFill = NULL, halign = "left", valign = NULL, textDecoration = NULL,
                            wrapText = FALSE, textRotation = NULL)
   
-  source("workBookFunctions.R")
   
   #Set up a dataframe to collect common worksheet names and descriptions. 
   wbInfoGeneral <- data.frame(sheet_Name=character(),sheet_Desc=character(), stringsAsFactors = FALSE)
@@ -67,9 +67,6 @@ f.createGeneralWorksheet <- function() {
   return(tmp)
 }
 
-
-
-
 #function to generate hyperlinks
 f.hyperlink <- function(sheetName,shtDesc) {
   #here's what I need tmp to look like =HYPERLINK("#'metadataRegions'!A1","test")
@@ -89,34 +86,31 @@ f.finalizeWB <- function(wb,wbInf,nut.name) {
   temp<- 2:length(names(wb))-1
   temp <- c(length(names(wb)),temp)
   worksheetOrder(wb) <- temp
-  xcelOutFileName <- paste("results/nutVals_",nut.name,Sys.Date(),".xlsx",sep="")
+  xcelOutFileName <- paste("results/",nut.name,Sys.Date(),".xlsx",sep="")
   
   saveWorkbook(wb, xcelOutFileName, overwrite = TRUE)
 }
 
-f.write.incShare.sheet <- function(nutdf,wb) { 
-  #nutdf contains rows for one scenario, food.group,code, and nutrient, all regions and all years
+f.write.incShare.sheet <- function(incShare,wb) { 
+  #incShare contains rows for one scenario, three budget calcs based on Pw, Pc, and Pcon, all regions and all years
   #wb is the spreadsheet file set up in workSheetCreation.R
   #wbInfo is used to create the metadata sheet
-  shtName <- paste(unique(nutdf$scenario),
-                   unique(nutdf$food.group.code),
-                   unique(nutdf$nutrient), sep="_")
+  shtName <- paste("IncShare_",unique(incShare$scenario), sep="")
   shtName <- substr(shtName,1,31) #sheetnames in xls must be <= 31
-  nutdf.wide <- spread(nutdf[,c("region","year","value")], year,value)
+  incShare.wide <- spread(incShare[,c("region","year","Pcon")], year, Pcon)
   addWorksheet(wb, sheetName=shtName)
-  writeData(wb, nutdf.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
-  return(c(shtName,paste("Average daily consumption of",
-                         (unique(nutdf$nutrient)), "in scenario",
-                         (unique(nutdf$scenario)), "and food group",
-                         (unique(nutdf$food.group.code)), sep = " ")))
+  writeData(wb, incShare.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  return(c(shtName,paste("Expenditure on IMPACT commodities as a share to per capita GDP in scenario",
+                         (unique(incShare$scenario)), sep = " ")))
 }  
 
 f.write.nut.sheet <- function(nutdf,wb) { 
   #nutdf contains rows for one scenario, food.group,code, and nutrient, all regions and all years
   #wb is the spreadsheet file set up in workSheetCreation.R
   #wbInfo is used to create the metadata sheet
-  shtName <- unique(nutdf$scenario)
+  shtName <- paste(unique(nutdf$scenario),unique(nutdf$food.group.code),unique(nutdf$nutrient), sep="_")
   shtName <- substr(shtName,1,31) #sheetnames in xls must be <= 31
+  print(shtName)
   nutdf.wide <- spread(nutdf[,c("region","year","value")], year,value)
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, nutdf.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)

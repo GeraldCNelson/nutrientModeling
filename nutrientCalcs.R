@@ -129,9 +129,9 @@ incomeShare <- incomeShare[,c("scenario","region","year","Pw","Pc","Pcon")]
 # - minerals - "calcium", "iron", "potassium", "sodium", "zinc"
 # - vitamins - "vitamin_c", "thiamin",	"riboflavin",	"niacin", "vitamin_b6",	"folate", "vitamin_b12",
 #   "vitamin_a_RAE", 	"vitamin_e", "vitamin_d2_3"
-# - fattyAcids - "fatty_acids_tot_sat", "fatty_acids_polyunsat"
+# - fattyAcids - "ft_acds_tot_sat", "ft_acds_plyunst"
 # next line is where the choice is made
-short.name <- c("minerals")
+short.name <- c("fattyAcids")
 nut.list <- eval(parse(text = short.name))
 includes <- c("IMPACT_code", nut.list)
 nuts.reduced <- nutrients[, (names(nutrients) %in% includes)]
@@ -140,13 +140,13 @@ df3 <- join(df2[,c("scenario","region","IMPACT_code","year","food")],foodGroupsI
 df3 <- df3[,c("scenario","region","IMPACT_code","year","food","food.group.code")]
 
 #nutrients.df <- gather(nutrients,nutrient,nut.value,energy:fatty_acids_polyunsat)
-tmp <- length(list.current)
+tmp <- length(nut.list)
 nutrients.df <- gather(nuts.reduced,nutrient,nut.value,
                        eval(parse(text = nut.list[1])):eval(parse(text = nut.list[tmp])))
 
 # 
 # df0 <- join(df0,tmp.nut)
-df4.year <- join(df3,nutrients.df)
+df4 <- join(df3,nutrients.df)
 
 df4 <- data.table(df4)
 
@@ -161,7 +161,7 @@ nutShareTot <- ddply(df4,
                   .(scenario,region,year,nutrient),
                   summarise,
                   value=sum(nut.value*food))
-save.image()
+save.image(file = paste(short.name,"image.RData",sep = "_"))
 
 #create excel output
 source("workSheetCreation.R")
