@@ -20,7 +20,7 @@ nutCodes <- c( "energy", "protein", "fat", "carbohydrate", "fiber", "sugar",
                "cholesterol")
 macro <- c("energy", "protein", "fat", "carbohydrate", "fiber", "sugar")
 minerals <- c("calcium", "iron", "potassium", "sodium", "zinc")
-vits <- c("vit_c", "thiamin",	"riboflavin",	"niacin", "vit_b6",	"folate", "vit_b12",
+vitamins <- c("vit_c", "thiamin",	"riboflavin",	"niacin", "vit_b6",	"folate", "vit_b12",
           "vit_a_RAE", 	"vit_e", "vit_d2_3")
 fattyAcids <-  c("ft_acds_tot_sat", "ft_acds_plyunst")
 

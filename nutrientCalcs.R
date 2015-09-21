@@ -131,7 +131,7 @@ incomeShare <- incomeShare[,c("scenario","region","year","Pw","Pc","Pcon")]
 #   "vitamin_a_RAE", 	"vitamin_e", "vitamin_d2_3"
 # - fattyAcids - "ft_acds_tot_sat", "ft_acds_plyunst"
 # next line is where the choice is made
-short.name <- c("fattyAcids")
+short.name <- c("vitamins")
 nut.list <- eval(parse(text = short.name))
 includes <- c("IMPACT_code", nut.list)
 nuts.reduced <- nutrients[, (names(nutrients) %in% includes)]
@@ -148,7 +148,16 @@ nutrients.df <- gather(nuts.reduced,nutrient,nut.value,
 # df0 <- join(df0,tmp.nut)
 df4 <- join(df3,nutrients.df)
 
-df4 <- data.table(df4)
+# df4 <- data.table(df4)
+# #------- test new code from Brendan
+# f.dfout <- function(dfIn) {
+#   dttmp <- data.table(dfIn)
+#   setkey(dttmp,"scenario","region","food.group.code","year","nutrient")
+#   dttim[,value:=sum(nut.value*food),by=key(dttmp)]
+#   as.data.frame(unique(dttmp[,c(key(dttmp),"value"),with=F]))
+# }                       
+t5 = system.time(nutShare <- f.dfout(df4))
+#------
 
 #convert from annual availability to daily availability
 df4$food <- df4$food/365
