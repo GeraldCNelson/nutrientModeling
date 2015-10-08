@@ -21,6 +21,8 @@ library(plyr)
 library(dplyr)
 library(tidyr)
 library(data.table)
+library(splitstackshape)
+library(plotrix)
 setwd("~/Documents/workspace/nutrientModeling")
 
 # Info for the basic worksheet ---------------------------------------
@@ -95,7 +97,7 @@ df1 <- join(df0,Pw)
 #             summarise,
 #             Pc=mean(value))
 
-#an alternative to the above
+#an alternative to the above commented out code
 dt.Pc <- as.data.table(t1.food[t1.food$IMPACTparameter == "Pc",])
 setkey(dt.Pc,"scenario","region","IMPACT_code","year")
 dt.Pc[,Pc:=mean(value),by=key(dt.Pc)]
@@ -145,31 +147,42 @@ nutrients.df <- gather(nuts.reduced,nutrient,nut.value,
                        eval(parse(text = nut.list[1])):eval(parse(text = nut.list[tmp])))
 
 # 
-# df0 <- join(df0,tmp.nut)
 df4 <- join(df3,nutrients.df)
-
-# df4 <- data.table(df4)
-# #------- test new code from Brendan
-# f.dfout <- function(dfIn) {
-#   dttmp <- data.table(dfIn)
-#   setkey(dttmp,"scenario","region","food.group.code","year","nutrient")
-#   dttim[,value:=sum(nut.value*food),by=key(dttmp)]
-#   as.data.frame(unique(dttmp[,c(key(dttmp),"value"),with=F]))
-# }                       
-t5 = system.time(nutShare <- f.dfout(df4))
-#------
-
 #convert from annual availability to daily availability
 df4$food <- df4$food/365
-t4 = system.time(nutShare <- ddply(df4,
-                  .(scenario,region,food.group.code,year,nutrient),
-                  summarise,
-                  value=sum(nut.value*food)))
+
+
+
+# #-------  new code from Brendan
+f.nutShare <- function(dfIn) {
+  dttmp <- data.table(dfIn)
+  setkey(dttmp,"scenario","region","food.group.code","year","nutrient")
+  dttmp[,value:=sum(nut.value*food),by=key(dttmp)]
+  as.data.frame(unique(dttmp[,c(key(dttmp),"value"),with=F]))
+ }                       
+nutShare <- f.nutShare(df4)
+#------stuff for testing
+
+nutShare.compare <- ddply(df4,
+                                   .(scenario,region,food.group.code,year,nutrient),
+                                   summarise,
+                                   value=sum(nut.value*food))
+#--- end stuff for testing
+
+f.nutShareTot <- function(dfIn) {
+  dttmp <- data.table(dfIn)
+  setkey(dttmp,"scenario","region","year","nutrient")
+  dttmp[,value:=sum(nut.value*food),by=key(dttmp)]
+  as.data.frame(unique(dttmp[,c(key(dttmp),"value"),with=F]))
+}    
+
+nutShareTot.test <- f.nutShareTot(df4)
 
 nutShareTot <- ddply(df4,
                   .(scenario,region,year,nutrient),
                   summarise,
                   value=sum(nut.value*food))
+
 save.image(file = paste(short.name,"image.RData",sep = "_"))
 
 #create excel output

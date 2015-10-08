@@ -47,7 +47,6 @@ nutrientNames_Units <- read.xlsx(nutrientFileName,
                                  colNames = FALSE)
 
 
-
 #convert NAs to 1 for edible_share and IMPACT_conversion
 nutrients[c("IMPACT_conversion","edible_share")][is.na(nutrients[c("IMPACT_conversion","edible_share")])] <- 1
 
