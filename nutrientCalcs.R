@@ -36,8 +36,8 @@ dateCreated <- Sys.Date()
 source(file="nutrientFunctions.R")
 #Read in data
 source(file ="IMPACTdataLoading.R")
+source(file = "EARfoodGroupCSELoading.R") #currently (10/8) needs to be run before nutrientDataLoading
 source(file = "nutrientDataLoading.R")
-source(file = "EARfoodGroupCSELoading.R")
 
 # Parameter,Description,csv IMPACT parameters,my short name
 # FoodAvailability,Food availability per capita (kg per person per year),FoodAvailXAgg,pcFoodAvail
@@ -85,37 +85,71 @@ Pw <- ddply(t1.food[t1.food$IMPACTparameter == "Pw",],
             summarise,
             Pw=mean(value))
 
-df0 <- ddply(t1.food[t1.food$IMPACTparameter == "pcFoodAvail",],
-             .(scenario,region,IMPACT_code,year),
-             summarise,
-             food=mean(value))
-
-df1 <- join(df0,Pw)
-
 # Pc <- ddply(t1.food[t1.food$IMPACTparameter == "Pc",],
 #             .(scenario,region,IMPACT_code,year),
 #             summarise,
 #             Pc=mean(value))
 
-#an alternative to the above commented out code
-dt.Pc <- as.data.table(t1.food[t1.food$IMPACTparameter == "Pc",])
-setkey(dt.Pc,"scenario","region","IMPACT_code","year")
-dt.Pc[,Pc:=mean(value),by=key(dt.Pc)]
-Pc <- as.data.frame(unique(dt.Pc[,c("scenario","region","IMPACT_code","year","Pc"),with=F]))
+#an alternative to the above commented out code; replaced by f.price
+# dt.Pc <- as.data.table(t1.food[t1.food$IMPACTparameter == "Pc",])
+# setkey(dt.Pc,"scenario","region","IMPACT_code","year")
+# dt.Pc[,Pc:=mean(value),by=key(dt.Pc)]
+# Pc <- as.data.frame(unique(dt.Pc[,c("scenario","region","IMPACT_code","year","Pc"),with=F]))
 
-df2 <- join(df1,Pc)
+#input to this function is "Pw" or "Pc"
+f.price <- function(price) {
+  dt.Price <- as.data.table(t1.food[t1.food$IMPACTparameter == price,])
+  setkey(dt.Price,"scenario","region","IMPACT_code","year")
+  dt.Price[,eval(price):=mean(value),by=key(dt.Price)]
+  Price <- as.data.frame(unique(dt.Price[,c("scenario","region","IMPACT_code","year",price),with=F]))
+}
+Pw <- f.price("Pw") # this leaves a region column in Pw
+Pc <- f.price("Pc")
 
-names(CSEs)[1] <- "region"
-df3 <- join(df2,CSEs)
+# old slow code
+# df0 <- ddply(t1.food[t1.food$IMPACTparameter == "pcFoodAvail",],
+#              .(scenario,region,IMPACT_code,year),
+#              summarise,
+#              food=mean(value))
+
+# new fast code
+dt.pcFoodAvail <- t1.food[t1.food$IMPACTparameter == "pcFoodAvail",]
+f.df0 <- function(dfIn) {
+  dttmp <- data.table(dfIn)
+  setkey(dttmp,"scenario","region","IMPACT_code", "year")
+  dttmp[,food:=mean(value),by=key(dttmp)]
+  as.data.frame(unique(dttmp[,c(key(dttmp),"food"),with=F]))
+}  
+df0 <- f.df0(dt.pcFoodAvail)
+
+# df1 <- join(df0,Pw)
+# df2 <- join(df1,Pc)
+
+dfList <- list(df0,Pw,Pc, CSEs)
+df3 <- join_all(dfList)
+
+
+# df3 <- join(df2,CSEs)
 df3[is.na(df3)] <- 0
 
-budget <- ddply(df3,
-                .(scenario,region,year),
-                summarise,
-                budget.Pw=sum(food * Pw)/365/1000,
-                budget.Pc=sum(food * Pc)/365/1000,
-                budget.Pcon=sum(food * Pc * (1-CSE))/365/1000)
+#old, slow
+# budget <- ddply(df3,
+#                 .(scenario,region,year),
+#                 summarise,
+#                 budget.Pw=sum(food * Pw)/365/1000,
+#                 budget.Pc=sum(food * Pc)/365/1000,
+#                 budget.Pcon=sum(food * Pc * (1-CSE))/365/1000)
 
+#new, fast
+f.budget <- function(dfIn) {
+  dttmp <- data.table(dfIn)
+  setkey(dttmp,"scenario","region","year")
+  dttmp[,budget.Pw:=sum(food * Pw/365/1000),by=key(dttmp)]
+  dttmp[,budget.Pcon:=sum(food * Pc * (1-CSE)/365/1000),by=key(dttmp)]
+  dttmp[,budget.Pc:=sum(food * Pc/365/1000),by=key(dttmp)]
+  as.data.frame(unique(dttmp[,c(key(dttmp),"budget.Pw","budget.Pc","budget.Pcon"),with=F]))
+} 
+budget <- f.budgetPcon(df3)
 
 incomeShare <-join(t1.pcGDP,budget)
 incomeShare$Pw <- incomeShare$budget.Pw / ((incomeShare$value * 1000)/365)
@@ -151,9 +185,9 @@ df4 <- join(df3,nutrients.df)
 #convert from annual availability to daily availability
 df4$food <- df4$food/365
 
+# #-------  new code from Brendan. This creates the same results as the commented out ddply code below but 
+#with a different row order
 
-
-# #-------  new code from Brendan
 f.nutShare <- function(dfIn) {
   dttmp <- data.table(dfIn)
   setkey(dttmp,"scenario","region","food.group.code","year","nutrient")
@@ -161,13 +195,13 @@ f.nutShare <- function(dfIn) {
   as.data.frame(unique(dttmp[,c(key(dttmp),"value"),with=F]))
  }                       
 nutShare <- f.nutShare(df4)
-#------stuff for testing
-
-nutShare.compare <- ddply(df4,
-                                   .(scenario,region,food.group.code,year,nutrient),
-                                   summarise,
-                                   value=sum(nut.value*food))
-#--- end stuff for testing
+# #------stuff for testing
+# 
+# nutShare.compare <- ddply(df4,
+#                                    .(scenario,region,food.group.code,year,nutrient),
+#                                    summarise,
+#                                    value=sum(nut.value*food))
+# #--- end stuff for testing
 
 f.nutShareTot <- function(dfIn) {
   dttmp <- data.table(dfIn)
@@ -176,14 +210,15 @@ f.nutShareTot <- function(dfIn) {
   as.data.frame(unique(dttmp[,c(key(dttmp),"value"),with=F]))
 }    
 
-nutShareTot.test <- f.nutShareTot(df4)
+nutShareTot <- f.nutShareTot(df4)
 
-nutShareTot <- ddply(df4,
-                  .(scenario,region,year,nutrient),
-                  summarise,
-                  value=sum(nut.value*food))
+# old slower code
+# nutShareTot <- ddply(df4,
+#                   .(scenario,region,year,nutrient),
+#                   summarise,
+#                   value=sum(nut.value*food))
 
-save.image(file = paste(short.name,"image.RData",sep = "_"))
+#save.image(file = paste(short.name,"image.RData",sep = "_"))
 
 #create excel output
 source("workSheetCreation.R")

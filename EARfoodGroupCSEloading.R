@@ -37,7 +37,7 @@ CSEs <- read.xlsx(CSEFileName,
                   sheet = 1,
                   cols = 1:3,
                   colNames = TRUE)
-colnames(CSEs) <- c("cty","IMPACT_code","CSE")
+colnames(CSEs) <- c("region","IMPACT_code","CSE")
 
 #Set up the EARs data
 EARs <- read.xlsx(EARFileName, sheet = 1, startRow = 3, colNames = FALSE)
