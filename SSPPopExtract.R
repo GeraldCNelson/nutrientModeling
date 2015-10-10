@@ -15,21 +15,12 @@
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 
-setwd("~/Documents/workspace/SSPDataManipulation")
-library(openxlsx) 
-library(reshape2)
-library(splitstackshape)
-library(plotrix)
-library(tidyr)
-library(plyr)
-
-#userName is reported in the basic info worksheet
-userName <- "Gerald Nelson"
+#run the nutrientCalcs.R script before running this one. This script will eventually be sourced from nutrientCalcs
 
 # file names
-IMPACTregionsFileName <- "../nutrientModeling/data/IMPACTRegionsJan2015.xlsx"
-SSPdataZipFileLocation <- c("data/SspDb_country_data_2013-06-12.csv.zip")
-SSPdataZipFileName <- c("SspDb_country_data_2013-06-12.csv")
+IMPACTregionsFileName <- "data/IMPACTRegionsJan2015.xlsx"
+SSPdataZipFileLocation <- c("data/SSPData/SspDb_country_data_2013-06-12.csv.zip")
+SSPdataZipFileName <- c("SspDb_country_data_2013-06-12.csv") #the name of the file inside the zip
 
 # Read in and manipulate the SSP data -------------------------------------
 
@@ -41,10 +32,12 @@ SSP <- read.csv(unz(description = SSPdataZipFileLocation, file=SSPdataZipFileNam
 #This code does the same thing, is fast, and clean
 SSP  <- SSP[,!sapply(SSP,function(x) all(is.na(x)))]
 
+colnames(SSP)[1:5] <- c("model", "scenario", "region", "variable","unit") # convert to lower case
+
 # Extract lists of the scenarios, regions, and data variables
-scenarios <- unique(SSP$SCENARIO) #There are 21 scenarios; 4 each for SSP1, 2, 3, and 5 and 5 for SSP 4.
-regions <- unique(SSP$REGION) #there are 194 regions
-vNames <- unique(SSP$VARIABLE)
+scenarios <- unique(SSP$scenario) #There are 21 scenarios; 4 each for SSP1, 2, 3, and 5 and 5 for SSP 4.
+regions <- unique(SSP$region) #there are 194 regions
+vNames <- unique(SSP$variable)
 
 #"SSP3_v9_130424" is from PIK and just for the US
 #"SSP3_v9_130325" is from OECD and is just GDP and population
@@ -56,7 +49,7 @@ vNames <- unique(SSP$VARIABLE)
 scenario3 <- "SSP3_v9_130115"
 model <- "IIASA-WiC POP"
 yearList <- c("X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050")
-SSP3Dat <- SSP[SSP$SCENARIO == scenario3 & SSP$MODEL == model,c("REGION","VARIABLE",yearList)]
+SSP3Dat <- SSP[SSP$scenario == scenario3 & SSP$model == model,c("region","variable",yearList)]
 
 # Create population-only data set by removing rows with education breakdown and GDP
 popList <- "Population"
@@ -78,44 +71,100 @@ genderList <-c("Male","Female")
 # SSPDat.NCAR$X2085 <- (SSPDat.NCAR$X2080 + SSPDat.NCAR$X2090)/2
 # SSPDat.NCAR$X2095 <- (SSPDat.NCAR$X2090 + SSPDat.NCAR$X2100)/2
 
-#This code is much cleaner than the above, if a bit less transparent.
+#This code is much cleaner than the above, if a bit less transparent. Not needed at the moment so commented out.
 #for (i in seq(2015,2095,10)) SSPDat.NCAR[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
 
+population.IIASA <- SSP3Dat[SSP3Dat$variable == "Population",] #keep this around for bug checking later
+population.IIASA$variable <- NULL #get rid of variable because it is just 'Population'
+population.IIASA <- population.IIASA[order(population.IIASA$region),] #alphabetize by region
 # Remove the aggregates of 
 # "Population", "Population|Female" and "Population|Male"
 removeList <- c("Population", "Population|Female", "Population|Male")
-pop3.IIASA <-SSP3Dat[!SSP3Dat$VARIABLE %in% removeList,]
-pop3.IIASA <- as.data.frame(cSplit(pop3.IIASA, 'VARIABLE', sep="|", type.convert=FALSE))
+pop3.IIASA <-SSP3Dat[!SSP3Dat$variable %in% removeList,]
 
+#split the variable names apart where there is a | (eg. X|Y becomes X and Y and new columns are created)
+pop3.IIASA <- as.data.frame(cSplit(pop3.IIASA, 'variable', sep="|", type.convert=FALSE))
+
+#name the new columns created by the spliting process above
 names(pop3.IIASA)[12:14] <- c("gender","age","education")
+
+#rename variables to align with the EAR names
 pop3.IIASA$age<- gsub("Aged","",pop3.IIASA$age)
 pop3.IIASA$age[pop3.IIASA$gender == "Female"] <- paste("SSPF", pop3.IIASA$age[pop3.IIASA$gender == "Female"], sep="")
 pop3.IIASA$age[pop3.IIASA$gender == "Male"] <- paste("SSPM", pop3.IIASA$age[pop3.IIASA$gender == "Male"], sep="")
 pop3.IIASA$age<- gsub("-","_",pop3.IIASA$age)
 
-
 #remove rows that breakdown an age group by education
 removeList <- c("No Education","Primary Education", "Secondary Education", "Tertiary Education")
 pop3.IIASA <-pop3.IIASA[!pop3.IIASA$education %in% removeList,]
 
-#remove extraneous columns
-keepList <- c("REGION", "age", yearList)
+#remove extraneous columns and keep only the ones needed
+keepList <- c("region", "age", yearList)
 pop3.IIASA <-pop3.IIASA[,keepList]
 
+# start process of creating a separte list for pregnant and lactating (P/L) women
+#this list is for females who could be pregnant and lactating and have for the most part 
+#identical nutrient needs if they are not P/L
 ageRowsToSum <- c("SSPF15_19", "SSPF20_24",
-               "SSPF25_29", "SSPF31_34",
-               "SSPF35_39", "SSPF41_44", "SSPF45_49")
-temp <- rowsum(pop3.IIASA[,yearList],group = pop3.IIASA$REGION)
-temp2 <- cbind(REGION = unique(pop3.IIASA$REGION),temp,age = "SSPF15_49", stringsAsFactors = FALSE) #a bit dangerous; assumes unique keeps region names in same order
+                  "SSPF25_29", "SSPF31_34",
+                  "SSPF35_39", "SSPF41_44", "SSPF45_49")
+#pull out the relevant rows
+temp.F15_49 <- pop3.IIASA[pop3.IIASA$age %in% ageRowsToSum,c("region",yearList)] #also gets rid of age column
 
-#get rid of now extraneous rows
-pop3.IIASA <-pop3.IIASA[!pop3.IIASA$age %in% ageRowsToSum,]
+#sum the relevant rows by region
+dttmp <- data.table(temp.F15_49)
+setkey(dttmp,"region")
+dftmp <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
+#add age column with the single value for the new age group
+preg.potential <- cbind(dftmp,age = "SSPF15_49")
+preg.potential$age <- NULL # get rid of this column since it only has identical elements
+#get rid of now extraneous rows so no double counting
+pop3.IIASA <- pop3.IIASA[!pop3.IIASA$age %in% ageRowsToSum,]
+#sort by region
+pop3.IIASA <- pop3.IIASA[order(pop3.IIASA$region),] 
 
-#add new row by merging pop3.IIASA and temp2 by REGION
-temp3 <- rbind(pop3.IIASA,temp2)
+#check to see if population totals are the same. Uncomment to test
+# dttmp <- data.table(temp3)
+# dttmp$age <- NULL
+# setkey(dttmp,"region")
+# pop.temp <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
+# summary(pop.temp$X2010 - population.IIASA$X2010) #the differences should be very small
 
 #now estimate the number of pregnant women and lactating women and add them
+#the estimate is based on the number of children aged 0 to 4. 
+#sum boys and girls 0 to 4
+kidsRows <- c("SSPF0_4","SSPM0_4")
+#create a temporary data frame with just those rows
+age.kids <- pop3.IIASA[pop3.IIASA$age %in% kidsRows,c("region",yearList)]
+dttmp <- data.table(age.kids)
+setkey(dttmp,"region")
+temp.kids <- dttmp[,lapply(.SD,sum),by=region]
 
+#pregnant and lactating women are a constant share of kids 0 to 4. This is a *kludge*!!!
+share.preg <- 0.2
+share.lact <- 0.2
+share.nonPL <- 1 - share.preg + share.lact
+temp.preg <- as.data.frame(temp.kids[,lapply(.SD, function(x) x * share.preg),by=region])
+temp.lact <- as.data.frame(temp.kids[,lapply(.SD, function(x) x * share.lact),by=region])
+
+#delete number of potentially pregnant and lactating women so no double counting
+
+removeList <- c("SSPF15_49")
+pop3.IIASA <-pop3.IIASA[!pop3.IIASA$age %in% removeList,]
+
+#add back number of non PL women
+dttmp <- data.table(preg.potential)
+setkey(dttmp,"region")
+temp.nonPL <- as.data.frame(dttmp[,lapply(.SD, function(x) x * share.nonPL),by=region])
+
+#add age column for the new P/L variables; also to temp.kids to be consistent
+temp.kids <- cbind(age.kids,age = "SSPKids0_4", stringsAsFactors = FALSE)
+temp.preg <- cbind(temp.preg,age = "SSPPreg", stringsAsFactors = FALSE)
+temp.lact <- cbind(temp.lact,age = "SSPLact", stringsAsFactors = FALSE)
+temp.nonPL <- cbind(temp.nonPL,age = "SSPF15_49", stringsAsFactors = FALSE)
+
+#add new rows to pop3.IIASA
+pop3.IIASA <- rbind(pop3.IIASA,temp.preg,temp.lact,temp.nonPL)
 
 
 #I think everything from here on down is extraneous, but I'm keeping it for now, just commented out.

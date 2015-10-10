@@ -23,6 +23,7 @@ library(tidyr)
 library(data.table)
 library(splitstackshape)
 library(plotrix)
+
 setwd("~/Documents/workspace/nutrientModeling")
 
 # Info for the basic worksheet ---------------------------------------
@@ -149,7 +150,7 @@ f.budget <- function(dfIn) {
   dttmp[,budget.Pc:=sum(food * Pc/365/1000),by=key(dttmp)]
   as.data.frame(unique(dttmp[,c(key(dttmp),"budget.Pw","budget.Pc","budget.Pcon"),with=F]))
 } 
-budget <- f.budgetPcon(df3)
+budget <- f.budget(df3)
 
 incomeShare <-join(t1.pcGDP,budget)
 incomeShare$Pw <- incomeShare$budget.Pw / ((incomeShare$value * 1000)/365)
