@@ -48,12 +48,15 @@ colnames(EARs) <- c("NutCode","nutNames.Units","X0_0.5","X0.5_1","X1_3","X4_8",
                     "M9_13","M14_18","M19_30","M_31_50","M51_70","M70Plus",
                     "F9_13","F14_18","F19_30","F_31_50","F51_70","F70Plus",
                     "P14_18","P19_30","P31_50","L14_18","L19_30","L31_50")
-#add columns to line up with the SSP pop data distribution from IIASA
+#add columns to line up with the SSP pop data distribution from IIASA; adjusted for pregnant and lactating women
 
 #children
-EARs$SSPX0_4 <- (EARs$X0_0.5 + EARs$X0.5_1 + EARs$X1_3)/3
-EARs$SSPX5_9 <- (EARs$X4_8)
-EARs$SSPX10_14 <- (EARs$X9_13)
+EARs$SSPF0_4 <- (EARs$X0_0.5 + EARs$X0.5_1 + EARs$X1_3)/3
+EARs$SSPM0_4 <- (EARs$X0_0.5 + EARs$X0.5_1 + EARs$X1_3)/3
+EARs$SSPF5_9 <- (EARs$X4_8)
+EARs$SSPM5_9 <- (EARs$X4_8)
+EARs$SSPF10_14 <- (EARs$X9_13)
+EARs$SSPM10_14 <- (EARs$X9_13)
 
 #males
 EARs$SSPM15_19 <- (EARs$X14_18)
@@ -76,12 +79,13 @@ EARs$SSPM95_99 <- (EARs$M70Plus)
 EARs$SSPM100Plus <- (EARs$M70Plus)
 
 #females
-EARs$SSPF20_24 <- (EARs$F19_30)
-EARs$SSPF25_29 <- (EARs$F19_30)
-EARs$SSPF30_34 <- (EARs$F31_50)
-EARs$SSPF35_39 <- (EARs$F31_50)
-EARs$SSPF40_45 <- (EARs$F31_50)
-EARs$SSPF45_49 <- (EARs$F31_50)
+# EARs$SSPF20_24 <- (EARs$F19_30)
+# EARs$SSPF25_29 <- (EARs$F19_30)
+# EARs$SSPF30_34 <- (EARs$F31_50)
+# EARs$SSPF35_39 <- (EARs$F31_50)
+EARs$SSPF15_49 <-  (EARs$F14_18 + EARs$F19_30 + EARs$F_31_50)/3
+# EARs$SSPF40_45 <- (EARs$F31_50)
+# EARs$SSPF45_49 <- (EARs$F31_50)
 EARs$SSPF50_54 <- (EARs$F31_50)
 EARs$SSPF55_59 <- (EARs$F51_70)
 EARs$SSPF60_64 <- (EARs$F51_70)
@@ -93,9 +97,11 @@ EARs$SSPF85_89 <- (EARs$F70Plus)
 EARs$SSPF90_94 <- (EARs$F70Plus)
 EARs$SSPF95_99 <- (EARs$F70Plus)
 EARs$SSPF100Plus <- (EARs$F70Plus)
-#pregnant and lactating are already included.
+EARs$SSPLact <- (EARs$L14_18 + EARs$L19_30 + EARs$L31_50)/3
+EARs$SSPPreg <- (EARs$P14_18 + EARs$P19_30 + EARs$P31_50)/3
 #delete old columns
 EARs <- EARs[, !names(EARs) %in% 
                c("X0_0.5","X0.5_1","X1_3","X4_8",
                  "M9_13","M14_18","M19_30","M_31_50","M51_70","M70Plus",
-                 "F9_13","F14_18","F19_30","F_31_50","F51_70","F70Plus")]
+                 "F9_13","F14_18","F19_30","F_31_50","F51_70","F70Plus",
+                 "P14_18","P19_30","P31_50","L14_18","L19_30","L31_50")]
