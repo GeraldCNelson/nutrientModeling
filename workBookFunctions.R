@@ -1,17 +1,18 @@
+#create some common styles
+numStyle <- createStyle(numFmt = "0.0")
+numStyle3 <- createStyle(numFmt = "0.000")
+shareStyle <- createStyle(numFmt = "0.0%")
+textStyle <- createStyle(fontName = NULL, fontSize = NULL, fontColour = NULL,
+                         numFmt = "GENERAL", border = NULL,
+                         borderColour = getOption("openxlsx.borderColour", "black"),
+                         borderStyle = getOption("openxlsx.borderStyle", "thin"), bgFill = NULL,
+                         fgFill = NULL, halign = "left", valign = NULL, textDecoration = NULL,
+                         wrapText = FALSE, textRotation = NULL)
 
 #function to create the first, common worksheets in the results workbook
 f.createGeneralWorksheet <- function() {
-  numStyle <- createStyle(numFmt = "0.0")
-  numStyle3 <- createStyle(numFmt = "0.000")
-  shareStyle <- createStyle(numFmt = "0.0%")
-  textStyle <- createStyle(fontName = NULL, fontSize = NULL, fontColour = NULL,
-                           numFmt = "GENERAL", border = NULL,
-                           borderColour = getOption("openxlsx.borderColour", "black"),
-                           borderStyle = getOption("openxlsx.borderStyle", "thin"), bgFill = NULL,
-                           fgFill = NULL, halign = "left", valign = NULL, textDecoration = NULL,
-                           wrapText = FALSE, textRotation = NULL)
-  
-  
+ 
+
   #Set up a dataframe to collect common worksheet names and descriptions. 
   wbInfoGeneral <- data.frame(sheet_Name=character(),sheet_Desc=character(), stringsAsFactors = FALSE)
   #convert wbInfoGeneral sheet_Name column to class hyperlink
