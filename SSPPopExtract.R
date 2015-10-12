@@ -189,15 +189,15 @@ f.repConsNut <- function(nutrient,pop) {
   dt.pop.melt <- melt.data.table(dt.pop,variable.name = "year", id.vars = c("region","age"), measure.vars = yearList, value.name = "pop.value")
   dt.pop.melt$year <- as.character(dt.pop.melt$year)
   dt.pop.nut <- join(dt.pop.melt,dt.nut.melt)
-#  dt.pop.nut$nutProd <- dt.pop.nut$pop.value * dt.pop.nut$nut.value
+  #  dt.pop.nut$nutProd <- dt.pop.nut$pop.value * dt.pop.nut$nut.value
   setkey(dt.pop.nut,"region","year")
   expr <- parse(text = paste0(nutrient, ":=sum(pop.value*nut.value)"))
-dt.pop.nut[,eval(expr), by=key(dt.pop.nut)]
+  dt.pop.nut[,eval(expr), by=key(dt.pop.nut)]
   xx <- as.data.frame(unique(dt.pop.nut[,c(key(dt.pop.nut),"region","year",eval(parse(text = nutrient))),with=F]))
   
-
-    dt.pop.nut[,nutProdSum:=sum(nutProd),by=key(dt.pop.nut)]
-
+  
+  dt.pop.nut[,nutProdSum:=sum(nutProd),by=key(dt.pop.nut)]
+  
 }
 
 xx <- f.repConsNut("protein",pop3.IIASA) 
