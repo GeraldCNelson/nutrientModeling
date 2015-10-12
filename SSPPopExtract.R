@@ -15,7 +15,15 @@
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 
-#run the nutrientCalcs.R script before running this one. This script will eventually be sourced from nutrientCalcs
+require(openxlsx)
+require(entropy)
+require(reshape2)
+require(plyr)
+require(dplyr)
+require(tidyr)
+require(data.table)
+require(splitstackshape)
+require(plotrix)
 
 # file names
 IMPACTregionsFileName <- "data/IMPACTRegionsJan2015.xlsx"
@@ -114,7 +122,7 @@ ageRowsToSum <- c("SSPF15_19", "SSPF20_24",
 #pull out the relevant rows
 temp.F15_49 <- pop3.IIASA[pop3.IIASA$age %in% ageRowsToSum,c("region",yearList)] #also gets rid of age column
 
-#sum the relevant rows by region
+#sum the relevant rows (females aged 15-49 as those that could be pregnant or lactating) by region
 dttmp <- data.table(temp.F15_49)
 setkey(dttmp,"region")
 dftmp <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
@@ -176,14 +184,23 @@ f.repConsNut <- function(nutrient,pop) {
   dt.nut.melt <- melt.data.table(dt.nut,variable.name = "age", id.vars = "NutCode", 
                                  value.name = "nut.value", stringsAsFactors = FALSE)
   dt.nut.melt$age <- as.character(dt.nut.melt$age)
+  dt.nut.melt[,NutCode:=NULL]
   dt.pop <- as.data.table(pop)
   dt.pop.melt <- melt.data.table(dt.pop,variable.name = "year", id.vars = c("region","age"), measure.vars = yearList, value.name = "pop.value")
   dt.pop.melt$year <- as.character(dt.pop.melt$year)
-  dt.pop.nut <- cbind(dt.pop.melt,dt.nut.melt)
-  setkey(dt.pop.nut,"region","age","year")
-  dt.pop.nut[,nutReq:=pop.value * nut.value,by=key(dt.pop.nut)]
+  dt.pop.nut <- join(dt.pop.melt,dt.nut.melt)
+#  dt.pop.nut$nutProd <- dt.pop.nut$pop.value * dt.pop.nut$nut.value
+  setkey(dt.pop.nut,"region","year")
+  expr <- parse(text = paste0(nutrient, ":=sum(pop.value*nut.value)"))
+dt.pop.nut[,eval(expr), by=key(dt.pop.nut)]
+  xx <- as.data.frame(unique(dt.pop.nut[,c(key(dt.pop.nut),"region","year",eval(parse(text = nutrient))),with=F]))
+  
+
+    dt.pop.nut[,nutProdSum:=sum(nutProd),by=key(dt.pop.nut)]
+
 }
-Pw <- f.repConsNut("protein",pop3.IIASA) # this leaves a region column in Pw
+
+xx <- f.repConsNut("protein",pop3.IIASA) 
 
 
 
