@@ -1,6 +1,15 @@
 # A 'subroutine' of nutrientCalcs.R
+require(openxlsx)
+require(entropy)
+require(reshape2)
+require(plyr)
+require(dplyr)
+require(tidyr)
+require(data.table)
+require(splitstackshape)
+require(plotrix)
 # Data loading code for nutrientCalcs -------------------------------------
-nutrientFileName <- "data/USDA GFS IMPACT V5.xlsx"
+nutrientFileName <- "data/USDA GFS IMPACT V6.xlsx"
 
 
 ## nutrient lookup table readin and cleanup -------------------------------
@@ -33,7 +42,7 @@ all <- c( "energy", "protein", "fat", "carbohydrate", "fiber", "sugar",
 nutrients <- read.xlsx(nutrientFileName, 
                        sheet = 1,
                        rows = 3:50,
-                       cols = 1:46,
+                       cols = 1:63,
                        colNames = TRUE)
 #shorten variable names
 colnames(nutrients) <- sub("fatty_acids","ft_acds",colnames(nutrients))
@@ -47,8 +56,17 @@ nutrientNames_Units <- read.xlsx(nutrientFileName,
                                  colNames = FALSE)
 
 
-#convert NAs to 1 for edible_share and IMPACT_conversion
-nutrients[c("IMPACT_conversion","edible_share")][is.na(nutrients[c("IMPACT_conversion","edible_share")])] <- 1
+#convert NAs to 100 (percent) for edible_share, IMPACT_conversion, and cooking retention
+#note these names have been shortened (e.g., vitamin to vit)
+colsToConvert <- c("IMPACT_conversion","edible_share", 
+                   #minerals
+                   "calcium_cr", "iron_cr", "magnesium_cr", "phosphorus_cr", "potassium_cr",
+                   "sodium_cr", "zinc_cr",
+                   #selected vitamins
+                   "vit_c_cr", "thiamin_cr", "riboflavin_cr","niacin_cr", "vit_b6_cr", 
+                   "folate_cr", "vit_b12_cr", "vit_A_cr")
+nutrients[colsToConvert][is.na(nutrients[colsToConvert])] <- 100
+
 
 #convert the NAs to 0  in the nutrients columns 
 nutrients[,nutCodes][is.na(nutrients[,nutCodes])] <- 0
@@ -59,6 +77,23 @@ nutrients[,nutCodes] <- nutrients[,nutCodes] * 10
 # convert to IMPACT unit equivalents (nutrients per edible share, e.g. carcass weight for meat to boneless)
 nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"IMPACT_conversion"]
 nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"edible_share"]
+
+#convert for cooking loss. There's probably a better way to do this but this kludge will work
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"calcium_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"iron_cr"]        
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"magnesium_cr"]   
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"phosphorus_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"potassium_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"sodium_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"zinc_cr"]           
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"vit_c_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"thiamin_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"riboflavin_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"niacin_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"vit_b6_cr"]         
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"folate_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"vit_b12_cr"]
+nutrients[,nutCodes] <- nutrients[,nutCodes] * nutrients[,"vit_A_cr"]
 
 #add food groups to nutrients in a column called category
 tmp <- foodGroupsInfo[,c("IMPACT_code","food.group.code")]
