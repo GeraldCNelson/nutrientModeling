@@ -93,6 +93,8 @@ pop3.IIASA$age<- gsub("Aged","",pop3.IIASA$age)
 pop3.IIASA$age[pop3.IIASA$gender == "Female"] <- paste("SSPF", pop3.IIASA$age[pop3.IIASA$gender == "Female"], sep="")
 pop3.IIASA$age[pop3.IIASA$gender == "Male"] <- paste("SSPM", pop3.IIASA$age[pop3.IIASA$gender == "Male"], sep="")
 pop3.IIASA$age<- gsub("-","_",pop3.IIASA$age)
+pop3.IIASA$age<- gsub("\\+","Plus",pop3.IIASA$age)
+pop3.IIASA <- pop3.IIASA[order(pop3.IIASA$region),] 
 
 #remove rows that breakdown an age group by education
 removeList <- c("No Education","Primary Education", "Secondary Education", "Tertiary Education")
@@ -106,8 +108,9 @@ pop3.IIASA <-pop3.IIASA[,keepList]
 #this list is for females who could be pregnant and lactating and have for the most part 
 #identical nutrient needs if they are not P/L
 ageRowsToSum <- c("SSPF15_19", "SSPF20_24",
-                  "SSPF25_29", "SSPF31_34",
-                  "SSPF35_39", "SSPF41_44", "SSPF45_49")
+                  "SSPF25_29", "SSPF30_34",
+                  "SSPF35_39", "SSPF40_44", "SSPF45_49")
+
 #pull out the relevant rows
 temp.F15_49 <- pop3.IIASA[pop3.IIASA$age %in% ageRowsToSum,c("region",yearList)] #also gets rid of age column
 
@@ -165,6 +168,23 @@ temp.nonPL <- cbind(temp.nonPL,age = "SSPF15_49", stringsAsFactors = FALSE)
 
 #add new rows to pop3.IIASA
 pop3.IIASA <- rbind(pop3.IIASA,temp.preg,temp.lact,temp.nonPL)
+pop3.IIASA <- pop3.IIASA[with(pop3.IIASA, order(region, age)), ]
+
+f.repConsNut <- function(nutrient,pop) {
+  dt.nut <- as.data.table(EARs[EARs$NutCode == nutrient,])
+  dt.nut[,nutNames.Units:=NULL]
+  dt.nut.melt <- melt.data.table(dt.nut,variable.name = "age", id.vars = "NutCode", 
+                                 value.name = "nut.value", stringsAsFactors = FALSE)
+  dt.nut.melt$age <- as.character(dt.nut.melt$age)
+  dt.pop <- as.data.table(pop)
+  dt.pop.melt <- melt.data.table(dt.pop,variable.name = "year", id.vars = c("region","age"), measure.vars = yearList, value.name = "pop.value")
+  dt.pop.melt$year <- as.character(dt.pop.melt$year)
+  dt.pop.nut <- cbind(dt.pop.melt,dt.nut.melt)
+  setkey(dt.pop.nut,"region","age","year")
+  dt.pop.nut[,nutReq:=pop.value * nut.value,by=key(dt.pop.nut)]
+}
+Pw <- f.repConsNut("protein",pop3.IIASA) # this leaves a region column in Pw
+
 
 
 #I think everything from here on down is extraneous, but I'm keeping it for now, just commented out.
