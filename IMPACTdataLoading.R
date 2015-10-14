@@ -18,7 +18,11 @@ daysInYear <- 365 #see http://stackoverflow.com/questions/9465817/count-days-per
 t1 <-read.csv(IMPACTfileName, stringsAsFactors = FALSE)
 colnames(t1) <- c("IMPACTparameter", "scenario", "IMPACT_code" , "region","productiontype", 
 "year", "value")
+#get rid of years 2005 to 2009
+t1 <- t1[!t1$year %in% 2005:2009,]
 t1$year <-  as.character(t1$year)
 #drop productiontype because it is not used in the demand analysis
-drops <- c("productiontype")
-t1 <- t1[, !(names(t1) %in% drops)]
+removeListCols <- c("productiontype")
+t1 <- t1[, !(names(t1) %in% removeListCols)]
+
+
