@@ -61,7 +61,10 @@ SSP3Dat <- SSP[SSP$scenario == scenario3 & SSP$model == model,c("region","variab
 
 # Create population-only data set by removing rows with education breakdown and GDP
 popList <- "Population"
-ageList <- c("Aged0-4", "Aged5-9","Aged10-14", "Aged15-19", "Aged20-24", "Aged25-29", "Aged30-34", "Aged35-39", "Aged40-44", "Aged45-49", "Aged50-54", "Aged55-59", "Aged60-64", "Aged65-69", "Aged70-74", "Aged75-79", "Aged80-84", "Aged85-89", "Aged90-94", "Aged95-99", "Aged100+")
+ageList <- c("Aged0-4", "Aged5-9","Aged10-14", "Aged15-19", "Aged20-24", "Aged25-29", 
+             "Aged30-34", "Aged35-39", "Aged40-44", "Aged45-49", "Aged50-54", "Aged55-59", 
+             "Aged60-64", "Aged65-69", "Aged70-74", "Aged75-79", "Aged80-84", "Aged85-89", 
+             "Aged90-94", "Aged95-99", "Aged100+")
 edList <- c("No Education", "Primary Education", "Secondary Education", "Tertiary Education")
 genderList <-c("Male","Female")
 # NCAR data are for 10 year periods, starting in 2010 and ending in 2100 and are broken down by Urban and Rural
@@ -82,8 +85,7 @@ genderList <-c("Male","Female")
 #This code is much cleaner than the above, if a bit less transparent. Not needed at the moment so commented out.
 #for (i in seq(2015,2095,10)) SSPDat.NCAR[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
 
-population.IIASA <- SSP3Dat[SSP3Dat$variable == "Population",] #keep this around for bug checking later
-population.IIASA$variable <- NULL #get rid of variable because it is just 'Population'
+population.IIASA <- SSP3Dat[SSP3Dat$variable == "Population",c("region",yearList)] #keep this around for bug checking later
 population.IIASA <- population.IIASA[order(population.IIASA$region),] #alphabetize by region
 # Remove the aggregates of 
 # "Population", "Population|Female" and "Population|Male"
@@ -125,21 +127,23 @@ temp.F15_49 <- pop3.IIASA[pop3.IIASA$age %in% ageRowsToSum,c("region",yearList)]
 #sum the relevant rows (females aged 15-49 as those that could be pregnant or lactating) by region
 dttmp <- data.table(temp.F15_49)
 setkey(dttmp,"region")
-dftmp <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
+preg.potential <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
 #add age column with the single value for the new age group
-preg.potential <- cbind(dftmp,age = "SSPF15_49")
-preg.potential$age <- NULL # get rid of this column since it only has identical elements
-#get rid of now extraneous rows so no double counting
+preg.potential$age <- rep("SSPF15_49",nrow(preg.potential))
+#get rid of now extraneous rows in pop3.IIASA so no double counting
 pop3.IIASA <- pop3.IIASA[!pop3.IIASA$age %in% ageRowsToSum,]
+#add the SSPF15_49 row to pop3.IIASA
+pop3.IIASA <- rbind(pop3.IIASA,preg.potential)
 #sort by region
 pop3.IIASA <- pop3.IIASA[order(pop3.IIASA$region),] 
 
 #check to see if population totals are the same. Uncomment to test
-# dttmp <- data.table(temp3)
-# dttmp$age <- NULL
-# setkey(dttmp,"region")
-# pop.temp <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
-# summary(pop.temp$X2010 - population.IIASA$X2010) #the differences should be very small
+dttmp <- data.table(pop3.IIASA)
+dttmp$age <- NULL
+setkey(dttmp,"region")
+pop.temp <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
+temp <- pop.temp$X2010 - population.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
+summary(temp) #the differences should be very small
 
 #now estimate the number of pregnant women and lactating women and add them
 #the estimate is based on the number of children aged 0 to 4. 
@@ -154,19 +158,18 @@ temp.kids <- dttmp[,lapply(.SD,sum),by=region]
 #pregnant and lactating women are a constant share of kids 0 to 4. This is a *kludge*!!!
 share.preg <- 0.2
 share.lact <- 0.2
-share.nonPL <- 1 - share.preg + share.lact
 temp.preg <- as.data.frame(temp.kids[,lapply(.SD, function(x) x * share.preg),by=region])
 temp.lact <- as.data.frame(temp.kids[,lapply(.SD, function(x) x * share.lact),by=region])
 
 #delete number of potentially pregnant and lactating women so no double counting
-
 removeList <- c("SSPF15_49")
 pop3.IIASA <-pop3.IIASA[!pop3.IIASA$age %in% removeList,]
 
 #add back number of non PL women
-dttmp <- data.table(preg.potential)
+dttmp <- as.data.table(preg.potential)
+dttmp2 <- as.data.table(temp.preg)
 setkey(dttmp,"region")
-temp.nonPL <- as.data.frame(dttmp[,lapply(.SD, function(x) x * share.nonPL),by=region])
+temp.nonPL <- as.data.frame(dttmp[,lapply(.SD, function(x) x * share.nonPL),by=region,.SDcols = -"age"])
 
 #add age column for the new P/L variables; also to temp.kids to be consistent
 temp.kids <- cbind(age.kids,age = "SSPKids0_4", stringsAsFactors = FALSE)
@@ -178,30 +181,51 @@ temp.nonPL <- cbind(temp.nonPL,age = "SSPF15_49", stringsAsFactors = FALSE)
 pop3.IIASA <- rbind(pop3.IIASA,temp.preg,temp.lact,temp.nonPL)
 pop3.IIASA <- pop3.IIASA[with(pop3.IIASA, order(region, age)), ]
 
-f.repConsNut <- function(nutrient,pop) {
-  dt.nut <- as.data.table(EARs[EARs$NutCode == nutrient,])
+#check to see if population totals are the same. Uncomment to test
+population.IIASA <- population.IIASA[order(population.IIASA$region),] 
+
+dttmp <- data.table(pop3.IIASA)
+dttmp$age <- NULL
+setkey(dttmp,"region")
+pop.temp <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
+temp <- pop.temp$X2010 - population.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
+summary(temp) #the differences should be very small
+
+dt.pop <- as.data.table(pop3.IIASA)
+dt.pop.melt <- melt(dt.pop,variable.name = "year", id.vars = c("region","age"), measure.vars = yearList, value.name = "pop.value")
+dt.pop.melt[,year:=as.character(year),]
+setkey(dt.pop.melt,"age")
+
+nut.list <- nutCodes
+nut.list <- nut.list[!nut.list %in% 
+            c("sugar","lipids","cholesterol","vit_a_RAE","vit_k","ft_acds_tot_sat",
+              "ft_acds_mono_unsat","ft_acds_plyunst","vit_d2_3")] # remove sugar because there are not EARs for it
+
+dt.regionYear <- unique(dt.pop.melt[,c("region","year"),with=F]) #starter dt
+setkey(dt.regionYear,"region","year")
+for (nutrient in nut.list) {
+  dt.nut <- as.data.table(EARs[grep(nutrient,EARs$NutCode),])
+  print(nutrient)
   dt.nut[,nutNames.Units:=NULL]
-  dt.nut.melt <- melt.data.table(dt.nut,variable.name = "age", id.vars = "NutCode", 
-                                 value.name = "nut.value", stringsAsFactors = FALSE)
-  dt.nut.melt$age <- as.character(dt.nut.melt$age)
+  dt.nut.melt <- melt(dt.nut,variable.name = "age", id.vars = "NutCode", 
+                      value.name = "nut.value", stringsAsFactors = FALSE) 
+  dt.nut.melt[,age:=as.character(age)]
   dt.nut.melt[,NutCode:=NULL]
-  dt.pop <- as.data.table(pop)
-  dt.pop.melt <- melt.data.table(dt.pop,variable.name = "year", id.vars = c("region","age"), measure.vars = yearList, value.name = "pop.value")
-  dt.pop.melt$year <- as.character(dt.pop.melt$year)
-  dt.pop.nut <- join(dt.pop.melt,dt.nut.melt)
-  #  dt.pop.nut$nutProd <- dt.pop.nut$pop.value * dt.pop.nut$nut.value
+  setkey(dt.nut.melt,"age")
+  #merge dt.pop.melt and dt.nut.melt
+  dt.pop.nut <- dt.pop.melt[dt.nut.melt] 
   setkey(dt.pop.nut,"region","year")
-  expr <- parse(text = paste0(nutrient, ":=sum(pop.value*nut.value)"))
-  dt.pop.nut[,eval(expr), by=key(dt.pop.nut)]
-  xx <- as.data.frame(unique(dt.pop.nut[,c(key(dt.pop.nut),"region","year",eval(parse(text = nutrient))),with=F]))
-  
-  
-  dt.pop.nut[,nutProdSum:=sum(nutProd),by=key(dt.pop.nut)]
-  
+  dt.pop.nut[,val:=sum(pop.value*nut.value),by=key(dt.pop.nut)]
+  xx <- unique(dt.pop.nut[,c("region","year","val"),with=F])
+  setnames(xx,"val",nutrient)
+  dt.regionYear <- dt.regionYear[xx]
+#  setnames(dt.regionYear,"val",nutrient)
 }
 
-xx <- f.repConsNut("protein",pop3.IIASA) 
+#repConsumer <- f.repConsNut("protein",pop3.IIASA) 
 
+#convert every 5 years data to every year
+for (i in seq(2010,2050,5)) repConsumer[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
 
 
 #I think everything from here on down is extraneous, but I'm keeping it for now, just commented out.
