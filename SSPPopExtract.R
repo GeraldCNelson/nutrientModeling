@@ -169,8 +169,12 @@ pop3.IIASA <-pop3.IIASA[!pop3.IIASA$age %in% removeList,]
 dttmp <- as.data.table(preg.potential)
 dttmp2 <- as.data.table(temp.preg)
 setkey(dttmp,"region")
-temp.nonPL <- as.data.frame(dttmp[,lapply(.SD, function(x) x * share.nonPL),by=region,.SDcols = -"age"])
 
+cols <- paste0("X",seq(2010,2050,5))
+temp.nonPL <- preg.potential[match(temp.preg$region,preg.potential$region),cols] - 
+  temp.preg[,cols] - 
+  temp.lact[match(temp.preg$region,temp.lact$region),cols] 
+temp.nonPL$region <- preg.potential$region
 #add age column for the new P/L variables; also to temp.kids to be consistent
 temp.kids <- cbind(age.kids,age = "SSPKids0_4", stringsAsFactors = FALSE)
 temp.preg <- cbind(temp.preg,age = "SSPPreg", stringsAsFactors = FALSE)
@@ -183,7 +187,6 @@ pop3.IIASA <- pop3.IIASA[with(pop3.IIASA, order(region, age)), ]
 
 #check to see if population totals are the same. Uncomment to test
 population.IIASA <- population.IIASA[order(population.IIASA$region),] 
-
 dttmp <- data.table(pop3.IIASA)
 dttmp$age <- NULL
 setkey(dttmp,"region")
@@ -198,11 +201,22 @@ setkey(dt.pop.melt,"age")
 
 nut.list <- nutCodes
 nut.list <- nut.list[!nut.list %in% 
-            c("sugar","lipids","cholesterol","vit_a_RAE","vit_k","ft_acds_tot_sat",
+            c("sugar","lipids","cholesterol","fat","vit_a_RAE","vit_k","ft_acds_tot_sat",
               "ft_acds_mono_unsat","ft_acds_plyunst","vit_d2_3")] # remove sugar because there are not EARs for it
 
-dt.regionYear <- unique(dt.pop.melt[,c("region","year"),with=F]) #starter dt
+#starter dt
+dt.regionYear <- unique(dt.pop.melt[,c("region","year"),with=F]) 
+
+#add total pop column to starter dt
 setkey(dt.regionYear,"region","year")
+dt.pop.IIASA <- as.data.table(population.IIASA)
+dt.pop.IIASA.melt <- melt(dt.pop.IIASA,id.vars = "region", 
+                          measure.vars = yearList, variable.name = "year", 
+                          value.name = "pop.tot")
+dt.pop.IIASA.melt[,year:=as.character(year),]
+dt.regionYear <- dt.regionYear[dt.pop.IIASA.melt]
+setkey(dt.regionYear,"region","year")
+
 for (nutrient in nut.list) {
   dt.nut <- as.data.table(EARs[grep(nutrient,EARs$NutCode),])
   print(nutrient)
@@ -217,15 +231,35 @@ for (nutrient in nut.list) {
   setkey(dt.pop.nut,"region","year")
   dt.pop.nut[,val:=sum(pop.value*nut.value),by=key(dt.pop.nut)]
   xx <- unique(dt.pop.nut[,c("region","year","val"),with=F])
-  setnames(xx,"val",nutrient)
-  dt.regionYear <- dt.regionYear[xx]
-#  setnames(dt.regionYear,"val",nutrient)
+  dt.regionYear <- dt.regionYear[xx] #tot amount of nutrient needed by all (sum of nutrient needed by age group over all age groups)
+  dt.regionYear[,percapval:=val/pop.tot,by=key(dt.regionYear)]
+  #  setkey(dt.regionYear,"region","year")
+  setnames(dt.regionYear,"val",nutrient)
+  setnames(dt.regionYear,"percapval",paste(nutrient,"_percap",sep=""))
 }
 
-#repConsumer <- f.repConsNut("protein",pop3.IIASA) 
+temp <- melt(dt.regionYear,id.vars=c("region","year"),measure.vars = c("energy_percap", "protein_percap", "fat_percap", 
+             "carbohydrate_percap", "fiber_percap", 
+             "calcium_percap", "iron_percap", "magnesium_percap",  "phosphorus_percap",
+             "potassium_percap",     "sodium_percap","zinc_percap",   
+             "vit_c_percap",    "thiamin_percap",  "riboflavin_percap","niacin_percap", "vit_b6_percap", "folate_percap", 
+             "vit_b12_percap", "vit_a_IU_percap", "vit_e_percap", "vit_d_percap"),
+             variable.name = "nutrient", value.name = "percapEAR")
+
+temp[,nutrient:=as.character(nutrient)]
+temp.wide <- dcast(temp, region +  nutrient ~ year, value.var = "percapEAR")
+# energy_percap + protein_percap + fat_percap + 
+# carbohydrate_percap + fiber_percap + 
+#   calcium_percap + iron_percap + magnesium_percap +  phosphorus_percap +
+#   potassium_percap +     sodium_percap +zinc_percap +   
+#   vit_c_percap +    thiamin_percap +  riboflavin_percap +niacin_percap + vit_b6_percap + folate_percap + 
+#   vit_b12_percap + vit_a_IU_percap + vit_e_percap + vit_d_percap
+write.csv(dt.regionYear, file = "results/regionyear.csv")
+write.csv(temp.wide, file = "results/repConsumerByYear.csv")
+
 
 #convert every 5 years data to every year
-for (i in seq(2010,2050,5)) repConsumer[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
+for (i in seq(2010,2050,5)) temp.wide[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
 
 
 #I think everything from here on down is extraneous, but I'm keeping it for now, just commented out.

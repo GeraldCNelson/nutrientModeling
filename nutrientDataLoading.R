@@ -9,7 +9,7 @@ require(data.table)
 require(splitstackshape)
 require(plotrix)
 # Data loading code for nutrientCalcs -------------------------------------
-nutrientFileName <- "data/USDA GFS IMPACT V6.xlsx"
+nutrientFileName <- "data/USDA GFS IMPACT V8.xlsx"
 
 
 ## nutrient lookup table readin and cleanup -------------------------------
@@ -18,19 +18,53 @@ nutrientFileName <- "data/USDA GFS IMPACT V6.xlsx"
 #              "VITB12","PANTO") 
 
 #the following codes are available but not being used right now. 
-nutCodesExcluded <- c( "water", "vits",	"lipids", "ft_acds_tot_sat", "ft_acds_mono_unsat", 
-                       "ft_acds_tot_trans","other","vits",
+nutCodesExcluded <- c("water", "vits",	"lipids", "ft_acds_tot_sat", "ft_acds_mono_unsat", 
+                       "other", "fat", "vit_a_IU",
+                       "lipids", "ft_acds_tot_trans", "ft_acds_tot_sat", "ft_acds_mono_unsat", "ft_acds_plyunst",	
                        "cholesterol")
 nutCodes <- c( "energy", "protein", "fat", "carbohydrate", "fiber", "sugar", 	
                "calcium", "iron", "magnesium", "phosphorus", "potassium", "sodium", "zinc",	
                "vit_c", "thiamin",	"riboflavin",	"niacin", "vit_b6",	"folate", "vit_b12",	
-               "vit_a_RAE", 	"vit_a_IU",	"vit_e", "vit_d2_3", "vit_d",	"vit_k",
+               "vit_a_RAE","vit_a_IU", "vit_e", "vit_d2_3", "vit_d",	"vit_k",
                "lipids", "ft_acds_tot_sat", "ft_acds_mono_unsat", "ft_acds_plyunst",	
                "cholesterol")
+
+nutrients.all <-  c("energy", "protein", "fat", "carbohydrate", "fiber", "sugar", 
+                   "calcium", "iron", "magnesium", "phosphorus", "potassium", "sodium", 
+                   "zinc", "vit_c", "thiamin", "riboflavin", "niacin", "vit_b6", "folate", 
+                   "vit_b12", "vit_a_RAE","vit_a_IU", "vit_e", "vit_d2_3", "vit_d", "vit_k", 
+                   "lipids", "ft_acds_tot_sat", "ft_acds_mono_unsat", "ft_acds_plyunst", "cholesterol")
+
+#These are nutrients we have EARs for
+#Source is http://www.nal.usda.gov/fnic/DRI/DRI_Tables/recommended_intakes_individuals.pdf
+
+nutrients.ear <- c("calcium", "cho", "protein", "vit_a", "vit_c", "vit_d", "vit_e", "thiamin", "riboflavin", 
+                   "niacin", "vit_b6", "folate", "vit_b12", "copper", "iodine", "iron", "magnesium", 
+                   "molybdenum", "phosphorus", "selenium", "zinc")
+
+#These are vitamins we have RDAs or AIs for
+#Source is http://www.nal.usda.gov/fnic/DRI/DRI_Tables/recommended_intakes_individuals.pdf
+vitamins.rda_ai <- c("vit_a", "vit_c", "vit_d", "vit_e", "vit_k", "thiamin", "riboflavin", "niacin", 
+                   "vit_b6", "folate", "vit_b12", "panto_acid", "biotin", "choline")
+
+#These are elements we have RDAs or AIs for
+#Source is http://www.nal.usda.gov/fnic/DRI/DRI_Tables/recommended_intakes_individuals.pdf
+minerals.rda_ai <- c("calcium", "chromium", "copper", "fluoride", "iodine", "iron", 
+                     "magnesium", "manganese", "molybdenum", "phosphorus", "selenium", "zinc", 
+                     "potassium", "sodium", "chloride")
+
+
+
+#nutCodes drops copper, manganese, and panto (pantothenic acid) because they are not in the nutrients file
+nutCodes <- c("energy", "protein", "carbohydrate", "fat", "fiber", "vit_RAE", "vit_c", 
+              "vit_d", "vit_e", "thiamin", "riboflavin", "niacin", "vit_b6", "folate", 
+              "vit_b12", "panto", "calcium", "phosphorus", "magnesium", 
+              "potassium", "sodium", "iron", "zinc")
+
 macro <- c("energy", "protein", "fat", "carbohydrate", "fiber", "sugar")
 minerals <- c("calcium", "iron", "potassium", "sodium", "zinc")
 vitamins <- c("vit_c", "thiamin",	"riboflavin",	"niacin", "vit_b6",	"folate", "vit_b12",
-          "vit_a_RAE", 	"vit_e", "vit_d2_3")
+          "vit_a", 	"vit_e_RAE", "vit_d2_3")
 fattyAcids <-  c("ft_acds_tot_sat", "ft_acds_plyunst")
 
 all <- c( "energy", "protein", "fat", "carbohydrate", "fiber", "sugar", 	
@@ -44,10 +78,6 @@ nutrients <- read.xlsx(nutrientFileName,
                        rows = 3:50,
                        cols = 1:63,
                        colNames = TRUE)
-#shorten variable names
-colnames(nutrients) <- sub("fatty_acids","ft_acds",colnames(nutrients))
-colnames(nutrients) <- sub("vitamin","vit",colnames(nutrients))
-colnames(nutrients) <- sub("polyunsat","plyunst",colnames(nutrients))
 
 nutrientNames_Units <- read.xlsx(nutrientFileName, 
                                  sheet = 1,
@@ -55,6 +85,7 @@ nutrientNames_Units <- read.xlsx(nutrientFileName,
                                  cols = 10:46,
                                  colNames = FALSE)
 
+#save only columns needed
 
 #convert NAs to 100 (percent) for edible_share, IMPACT_conversion, and cooking retention
 #note these names have been shortened (e.g., vitamin to vit)

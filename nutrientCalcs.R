@@ -168,7 +168,7 @@ incomeShare <- incomeShare[,c("scenario","region","year","Pw","Pc","Pcon")]
 #      "vitamin_a_RAE", 	"vitamin_e", "vitamin_d2_3"
 # - fattyAcids - "ft_acds_tot_sat", "ft_acds_plyunst"
 # next line is where the choice is made
-short.name <- c("fattyAcids")
+short.name <- c("vitamins")
 nut.list <- eval(parse(text = short.name))
 includes <- c("IMPACT_code", nut.list)
 nuts.reduced <- nutrients[, (names(nutrients) %in% includes)]
