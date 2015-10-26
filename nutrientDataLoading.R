@@ -55,14 +55,6 @@ cookretn.cols <- colnames(nutrients[, grep('_cr', names(nutrients))] )
 temp <-  c("IMPACT_code", "edible_share", "IMPACT_conversion",cookretn.cols)
 nutrients.food <- colnames(nutrients[, !(names(nutrients) %in% temp)])
 
-# make lists of nutrients common to the food nutrient list and the requirements list ---
-common.EAR <- intersect(colnames(nutrients),colnames(req.EAR.ssp))
-common.RDA.macro <- intersect(colnames(nutrients),colnames(req.RDA.macro.ssp))
-common.RDA.vits <- intersect(colnames(nutrients),colnames(req.RDA.vits.ssp))
-common.UL.minrls <- intersect(colnames(nutrients),colnames(req.UL.minrls.ssp))
-common.UL.vits <- intersect(colnames(nutrients),colnames(req.UL.vits.ssp))
-
-
 # macro <- c("energy", "protein", "fat", "carbohydrate", "fiber", "sugar")
 # minerals <- c("calcium", "iron", "potassium", "sodium", "zinc")
 # vitamins <- c("vit_c", "thiamin",	"riboflavin",	"niacin", "vit_b6",	"folate", "vit_b12",
@@ -101,8 +93,31 @@ for (i in 1:length(cookretn.cols)) {
 #remove extraneous columns
 colsToRemove <- c("edible_share","IMPACT_conversion",cookretn.cols)
 nutrients <- nutrients[,!(names(nutrients) %in% colsToRemove)]
-#add food groups to nutrients in a column called category
+
+# add food groups and staples codes to the nutrients table ---
+commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.xlsx"
+
+# add food groups and staples codes to the nutrients table
+foodGroupsInfo <- read.xlsx(commodityFoodGroupLookupFileName, 
+                            sheet = 1,
+                            startRow = 1,
+                            cols = 1:4,
+                            colNames = TRUE)
 tmp <- foodGroupsInfo[,c("IMPACT_code","food.group.code")]
 nutrients <- merge(nutrients, tmp, by = "IMPACT_code")
+
+# staples are roots and cereals
+food.groups <- c("fruits", "cereals", "pulses", "meats", "beverages",
+                    "roots", "eggs", "oils", "oilSeeds", "diary", "sweeteners",
+                    "vegetables")
+staple.category <- c("nonstaple","staple","nonstaple","nonstaple","nonstaple",
+                     "staple","nonstaple","nonstaple","nonstaple","nonstaple","nonstaple",
+                     "nonstaple")
+staples <- data.frame(food.group.code = food.groups,
+                      staple.code = staple.category, 
+                      stringsAsFactors = FALSE)
+
+nutrients <- merge(nutrients, staples, by = "food.group.code")
+
 
 write.csv(nutrients,file = "results/nutrients_final.csv", fileEncoding = "Windows-1252")
