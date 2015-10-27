@@ -24,8 +24,10 @@ require(tidyr)
 require(data.table)
 require(splitstackshape)
 require(plotrix)
+setwd("~/Documents/workspace/nutrientModeling")
 
-# file names
+# file names -------------------------------------------------------------------
+
 IMPACTregionsFileName <- "data/IMPACTRegionsJan2015.xlsx"
 SSPdataZipFileLocation <- c("data/SSPData/SspDb_country_data_2013-06-12.csv.zip")
 SSPdataZipFileName <- c("SspDb_country_data_2013-06-12.csv") #the name of the file inside the zip
@@ -42,7 +44,8 @@ SSP  <- SSP[,!sapply(SSP,function(x) all(is.na(x)))]
 
 colnames(SSP)[1:5] <- c("model", "scenario", "region", "variable","unit") # convert to lower case
 
-# Extract lists of the scenarios, regions, and data variables
+# Extract lists of the scenarios, regions, and data variables ------------------------------------
+
 scenarios <- unique(SSP$scenario) #There are 21 scenarios; 4 each for SSP1, 2, 3, and 5 and 5 for SSP 4.
 regions <- unique(SSP$region) #there are 194 regions
 vNames <- unique(SSP$variable)
@@ -59,7 +62,7 @@ model <- "IIASA-WiC POP"
 yearList <- c("X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050")
 SSP3Dat <- SSP[SSP$scenario == scenario3 & SSP$model == model,c("region","variable",yearList)]
 
-# Create population-only data set by removing rows with education breakdown and GDP
+# Create population-only data set by removing rows with education breakdown and GDP -----
 popList <- "Population"
 ageList <- c("Aged0-4", "Aged5-9","Aged10-14", "Aged15-19", "Aged20-24", "Aged25-29", 
              "Aged30-34", "Aged35-39", "Aged40-44", "Aged45-49", "Aged50-54", "Aged55-59", 
@@ -114,7 +117,7 @@ pop3.IIASA <-pop3.IIASA[!pop3.IIASA$education %in% removeList,]
 keepList <- c("region", "age", yearList)
 pop3.IIASA <-pop3.IIASA[,keepList]
 
-# start process of creating a separte list for pregnant and lactating (P/L) women
+# start process of creating a separate list for pregnant and lactating (P/L) women----
 #this list is for females who could be pregnant and lactating and have for the most part 
 #identical nutrient needs if they are not P/L
 ageRowsToSum <- c("SSPF15_19", "SSPF20_24",
@@ -199,11 +202,6 @@ dt.pop.melt <- melt(dt.pop,variable.name = "year", id.vars = c("region","age"), 
 dt.pop.melt[,year:=as.character(year),]
 setkey(dt.pop.melt,"age")
 
-nut.list <- nutCodes
-nut.list <- nut.list[!nut.list %in% 
-            c("sugar","lipids","cholesterol","fat","vit_a_RAE","vit_k","ft_acds_tot_sat",
-              "ft_acds_mono_unsat","ft_acds_plyunst","vit_d2_3")] # remove sugar because there are not EARs for it
-
 #starter dt
 dt.regionYear <- unique(dt.pop.melt[,c("region","year"),with=F]) 
 
@@ -217,27 +215,35 @@ dt.pop.IIASA.melt[,year:=as.character(year),]
 dt.regionYear <- dt.regionYear[dt.pop.IIASA.melt]
 setkey(dt.regionYear,"region","year")
 
-for (nutrient in nut.list) {
-  dt.nut <- as.data.table(EARs[grep(nutrient,EARs$NutCode),])
-  print(nutrient)
-  dt.nut[,nutNames.Units:=NULL]
-  dt.nut.melt <- melt(dt.nut,variable.name = "age", id.vars = "NutCode", 
-                      value.name = "nut.value", stringsAsFactors = FALSE) 
-  dt.nut.melt[,age:=as.character(age)]
-  dt.nut.melt[,NutCode:=NULL]
-  setkey(dt.nut.melt,"age")
-  #merge dt.pop.melt and dt.nut.melt
-  dt.pop.nut <- dt.pop.melt[dt.nut.melt] 
-  setkey(dt.pop.nut,"region","year")
-  dt.pop.nut[,val:=sum(pop.value*nut.value),by=key(dt.pop.nut)]
-  xx <- unique(dt.pop.nut[,c("region","year","val"),with=F])
-  dt.regionYear <- dt.regionYear[xx] #tot amount of nutrient needed by all (sum of nutrient needed by age group over all age groups)
-  dt.regionYear[,percapval:=val/pop.tot,by=key(dt.regionYear)]
-  #  setkey(dt.regionYear,"region","year")
-  setnames(dt.regionYear,"val",nutrient)
-  setnames(dt.regionYear,"percapval",paste(nutrient,"_percap",sep=""))
+#nutrient requirements are calculated in EARfoodGroupCSEloading.R. the next line is a list as of Oct 26
+#reqs <- c("req.EAR","req.RDA.vits","req.RDA.minrls","req.RDA.macro","req.UL.vits","req.UL.minrls")
+#The list of variables for each is common.EAR, common.RDA.vits, common.RDA.minrls, common.RDA.macro, common.UL.vits, 
+#        common.UL.minrls, common.AMDR
+ # get nutrient requirements for representative consumer by requirement type  ----
+type.list <- c("common.EAR", "common.RDA.vits", "common.RDA.minrls", "common.RDA.macro", "common.UL.vits", 
+"common.UL.minrls")
+for (req.type in type.list) {
+  for (nutrient in req.type) {
+    dt.nut <- as.data.table(EARs[grep(nutrient,EARs$NutCode),])
+    print(nutrient)
+    dt.nut[,nutNames.Units:=NULL]
+    dt.nut.melt <- melt(dt.nut,variable.name = "age", id.vars = "NutCode", 
+                        value.name = "nut.value", stringsAsFactors = FALSE) 
+    dt.nut.melt[,age:=as.character(age)]
+    dt.nut.melt[,NutCode:=NULL]
+    setkey(dt.nut.melt,"age")
+    #merge dt.pop.melt and dt.nut.melt
+    dt.pop.nut <- dt.pop.melt[dt.nut.melt] 
+    setkey(dt.pop.nut,"region","year")
+    dt.pop.nut[,val:=sum(pop.value*nut.value),by=key(dt.pop.nut)]
+    xx <- unique(dt.pop.nut[,c("region","year","val"),with=F])
+    dt.regionYear <- dt.regionYear[xx] #tot amount of nutrient needed by all (sum of nutrient needed by age group over all age groups)
+    dt.regionYear[,percapval:=val/pop.tot,by=key(dt.regionYear)]
+    #  setkey(dt.regionYear,"region","year")
+    setnames(dt.regionYear,"val",nutrient)
+    setnames(dt.regionYear,"percapval",paste(nutrient,"_percap",sep=""))
+  }
 }
-
 temp <- melt(dt.regionYear,id.vars=c("region","year"),measure.vars = c("energy_percap", "protein_percap", "fat_percap", 
              "carbohydrate_percap", "fiber_percap", 
              "calcium_percap", "iron_percap", "magnesium_percap",  "phosphorus_percap",

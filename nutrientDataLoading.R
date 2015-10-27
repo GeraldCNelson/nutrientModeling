@@ -26,7 +26,7 @@ require(data.table)
 require(splitstackshape)
 require(plotrix)
 # Data loading code for nutrientCalcs -------------------------------------
-nutrientFileName <- "data/USDA GFS IMPACT V8.xlsx"
+nutrientFileName <- "data/USDA GFS IMPACT V9.xlsx"
 
 nutrients <- read.xlsx(nutrientFileName, 
                        sheet = 1,
@@ -45,8 +45,6 @@ nutrientNames_Units <- read.xlsx(nutrientFileName,
 colsToRemove <- c("name","USDA_code_desc","AUS_code","comment","water_g","inedible_share","proximates",
                   "minerals","vitamins","lipids","other","RetentionCode","RetentionDescription")
 nutrients <- nutrients[,!(names(nutrients) %in% colsToRemove)]
-
-# Source of requirements is http://www.nal.usda.gov/fnic/DRI/DRI_Tables/recommended_intakes_individuals.pdf ---
 
 #list of columns with cooking retention values
 cookretn.cols <- colnames(nutrients[, grep('_cr', names(nutrients))] )
@@ -117,7 +115,8 @@ staples <- data.frame(food.group.code = food.groups,
                       staple.code = staple.category, 
                       stringsAsFactors = FALSE)
 
-nutrients <- merge(nutrients, staples, by = "food.group.code")
+nutrients <- merge(nutrients, staples, by = "food.group.code", all = TRUE)
+nutrients <- nutrients[,c(2:length(nutrients),1)]
 
-
-write.csv(nutrients,file = "results/nutrients_final.csv", fileEncoding = "Windows-1252")
+nutrients.out <- iconv(nutrients, from = "UTF-8", to = "Windows-1252") #to deal with mu
+write.csv(nutrients.out,file = "results/nutrients_final.csv", fileEncoding = "Windows-1252")
