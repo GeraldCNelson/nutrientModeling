@@ -129,17 +129,19 @@ setnames(dt.pcFoodAvail,"value","food")
 # dt.df0 <- unique(dt.pcFoodAvail[,c(key(dt.pcFoodAvail),"food"),with=F])
 dt.CSEs <- as.data.table(CSEs)
 setorder(dt.CSEs,"scenario", "region","IMPACT_code","CSE")
-setkey(dt.CSEs,"region","IMPACT_code","CSE")
 
-dtList <- list(dt.pcFoodAvail,dt.Pw,dt.Pc, dt.CSEs)
+dtList <- list(dt.pcFoodAvail,dt.Pc,dt.Pw, dt.CSEs)
 setkey(dt.pcFoodAvail,"scenario","region","IMPACT_code")
 setkey(dt.Pw,"scenario","IMPACT_code")
+setkey(dt.CSEs,"region","IMPACT_code")
 setkey(dt.Pc,"scenario","region","IMPACT_code")
 
 dt.df1 <- join_all(dtList)
-dt.df1 <- dt.df0[dt.CSEs[dt.Pc[dt.Pw]]]
 
-temp <- as.data.frame(Pc)
+saveRDS(dt.df1, file="data/IMPACTdatatable.rds")
+# I think everything below here is now extraneous but I leave it just in case
+
+#temp <- as.data.frame(Pc)
 
  # Pc <- ddply(t1.food[t1.food$IMPACTparameter == "Pc",],
  #             .(scenario,region,IMPACT_code,year),
@@ -153,39 +155,39 @@ temp <- as.data.frame(Pc)
 # Pc <- as.data.frame(unique(dt.Pc[,c("scenario","region","IMPACT_code","year","Pc"),with=F]))
 # 
 #input to this function is "Pw" or "Pc"
-f.price <- function(price) {
-  dt.Price <- as.data.table(t1.food[t1.food$IMPACTparameter == price,])
-  setkey(dt.Price,"scenario","region","IMPACT_code","year")
-  dt.Price[,eval(price):=mean(value),by=key(dt.Price)]
-  Price <- as.data.frame(unique(dt.Price[,c("scenario","region","IMPACT_code","year",price),with=F]))
-}
-Pw <- f.price("Pw") # this leaves a region column in Pw
-Pc <- f.price("Pc")
-
+# f.price <- function(price) {
+#   dt.Price <- as.data.table(t1.food[t1.food$IMPACTparameter == price,])
+#   setkey(dt.Price,"scenario","region","IMPACT_code","year")
+#   dt.Price[,eval(price):=mean(value),by=key(dt.Price)]
+#   Price <- as.data.frame(unique(dt.Price[,c("scenario","region","IMPACT_code","year",price),with=F]))
+# }
+# Pw <- f.price("Pw") # this leaves a region column in Pw
+# Pc <- f.price("Pc")
 # 
-# # old slow code
-# # df0 <- ddply(t1.food[t1.food$IMPACTparameter == "pcFoodAvail",],
-# #              .(scenario,region,IMPACT_code,year),
-# #              summarise,
-# #              food=mean(value))
+# # 
+# # # old slow code
+# # # df0 <- ddply(t1.food[t1.food$IMPACTparameter == "pcFoodAvail",],
+# # #              .(scenario,region,IMPACT_code,year),
+# # #              summarise,
+# # #              food=mean(value))
+# # 
+# # # new fast code
+# f.df0 <- function(dfIn) {
+#   dt.tmp <- data.table(dfIn)
+#   setkey(dt.tmp,"scenario","region","IMPACT_code", "year")
+#   dt.tmp[,food:=mean(value),by=key(dt.tmp)]
+#   as.data.frame(unique(dt.tmp[,c(key(dt.tmp),"food"),with=F]))
+# }  
+# df0 <- f.df0(dt.pcFoodAvail)
 # 
-# # new fast code
-f.df0 <- function(dfIn) {
-  dt.tmp <- data.table(dfIn)
-  setkey(dt.tmp,"scenario","region","IMPACT_code", "year")
-  dt.tmp[,food:=mean(value),by=key(dt.tmp)]
-  as.data.frame(unique(dt.tmp[,c(key(dt.tmp),"food"),with=F]))
-}  
-df0 <- f.df0(dt.pcFoodAvail)
-
-# df1 <- join(df0,Pw)
-# df2 <- join(df1,Pc)
-
-dfList <- list(df0,Pw,Pc, CSEs)
-df1 <- join_all(dfList)
-
-
-# df3 <- join(df2,CSEs)
-df1[is.na(df1)] <- 0
+# # df1 <- join(df0,Pw)
+# # df2 <- join(df1,Pc)
+# 
+# dfList <- list(df0,Pw,Pc, CSEs)
+# df1 <- join_all(dfList)
+# 
+# 
+# # df3 <- join(df2,CSEs)
+# df1[is.na(df1)] <- 0
 
 

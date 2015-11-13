@@ -37,10 +37,9 @@ dateCreated <- Sys.Date()
 source(file="nutrientFunctions.R")
 #Read in data
 source(file ="IMPACTdataLoading.R")
-source(file = "EARfoodGroupCSELoading.R") #currently (10/8) needs to be run before nutrientDataLoading
+source(file = "EARfoodGroupCSELoading.R")
 
 #source(file = "nutrientDataLoading.R") # this is run from EARfoodGroupCSELoading.
-
 
 #old, slow
 # budget <- ddply(df3,
@@ -52,12 +51,12 @@ source(file = "EARfoodGroupCSELoading.R") #currently (10/8) needs to be run befo
 
 #new, fast
 f.budget <- function(dfIn) {
-  dttmp <- data.table(dfIn)
-  setkey(dttmp,"scenario","region","year")
-  dttmp[,budget.Pw:=sum(food * Pw/365/1000),by=key(dttmp)]
-  dttmp[,budget.Pcon:=sum(food * Pc * (1-CSE)/365/1000),by=key(dttmp)]
-  dttmp[,budget.Pc:=sum(food * Pc/365/1000),by=key(dttmp)]
-  as.data.frame(unique(dttmp[,c(key(dttmp),"budget.Pw","budget.Pc","budget.Pcon"),with=F]))
+  dt.tmp <- data.table(dfIn)
+  setkey(dt.tmp,"scenario","region","year")
+  dttmp[,budget.Pw:=sum(food * Pw/365/1000),by=key(dt.tmp)]
+  dttmp[,budget.Pcon:=sum(food * Pc * (1-CSE)/365/1000),by=key(dt.tmp)]
+  dttmp[,budget.Pc:=sum(food * Pc/365/1000),by=key(dt.tmp)]
+  as.data.frame(unique(dt.tmp[,c(key(dt.tmp),"budget.Pw","budget.Pc","budget.Pcon"),with=F]))
 } 
 budget <- f.budget(df1)
 
