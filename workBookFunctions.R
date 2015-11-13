@@ -28,7 +28,7 @@ f.createGeneralWorksheet <- function() {
   creationInfo <- rbind(creationInfo, paste("Date of file creation:", Sys.Date()))
   creationInfo <- rbind(creationInfo, paste("IMPACT data:", IMPACTfileName))
   creationInfo <- rbind(creationInfo, paste("Nutrient data:", nutrientFileName))
-  creationInfo <- rbind(creationInfo, paste("EAR data:", EARFileName))
+  creationInfo <- rbind(creationInfo, paste("Nutrient requirements data:", EARFileName))
   
   addWorksheet(wbGeneral, sheetName="creation_Info")
   writeData(wbGeneral, creationInfo, sheet="creation_Info", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)

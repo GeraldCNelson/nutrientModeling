@@ -29,18 +29,10 @@ require(tidyr)
 require(data.table)
 require(splitstackshape)
 require(plotrix)
-setwd("~/Documents/workspace/nutrientModeling")
-EARFileName <- "data/DRI_IOM_V2.xlsx"
-# CSE - consumer support equivalent
-#Note: the price a consumer pays is Pc * (1-CSE)
-CSEFileName <- "data/IMPACTData/CSEs20150824.xlsx" 
 
 source("nutrientDataLoading.R") # so the nutrients df is built
+# file name definitions are in setup.R
 # Read in and clean up files ----------------------------------------------
-
-
-# Note: staples is not a food group per se but included here because it is used in one of the diversity metrics
-staples <- c("cereals", "roots")
 
 # This is the list of food group codes as of June 28, 2015
 # beverages <- c("beverages")
@@ -177,7 +169,7 @@ for (j in reqs) {
     preg[preg$ageGenderCode == "Preg31_50",2:length(preg)] /3
   preg$ageGenderCode <- "SSPPreg"
   
-  temp2 <- rbind_all(list(temp2,preg.potent,lact,preg))
+  temp2 <- as.data.frame(rbind_all(list(temp2,preg.potent,lact,preg)))
   
   #delete extraneous rows
   temp2 <- temp2[(!temp2$ageGenderCode %in% male[,2] & 
@@ -194,8 +186,6 @@ for (j in reqs) {
 }
 
 remove(
-#  "req.EAR","req.RDA.vits","req.RDA.minrls","req.RDA.macro","req.UL.vits",
-#       "req.UL.minrls","req.AMDR",
        "temp","temp2","male","male.dri","male.ssp",
        "children","chldrn.male","chldrn.male.SSP","female","chldrn.female.SSP", "preg.potent","preg",
        "female.dri","female.ssp","lact","tmp",
@@ -203,6 +193,9 @@ remove(
        "req.RDA.macro.nutlist", "req.UL.minrls.nutlist","req.RDA.minrls.nutlist",
        "req.RDA.vits.nutlist","req.UL.vits.nutlist",
        "newDFname","nutColName", "nutlistname")
+
+#these have been replaced by their equivalent with SSP age categories
+remove(req.EAR, req.RDA.vits, req.RDA.minrls, req.RDA.macro, req.UL.vits, req.UL.minrls, req.AMDR)
 
 # remove(common.EAR, common.RDA.vits, common.RDA.minrls, common.RDA.macro, common.UL.vits, 
 #        common.UL.minrls, common.AMDR )

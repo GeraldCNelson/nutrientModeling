@@ -25,8 +25,11 @@ require(tidyr)
 require(data.table)
 require(splitstackshape)
 require(plotrix)
+setwd("~/Documents/workspace/nutrientModeling")
+
+source("setup.R") #single script where data file names are stored
+
 # Data loading code for nutrientCalcs -------------------------------------
-nutrientFileName <- "data/USDA GFS IMPACT V9.xlsx"
 
 nutrients <- read.xlsx(nutrientFileName, 
                        sheet = 1,
@@ -80,9 +83,9 @@ nutrients[,nutrients.food] <- nutrients[,nutrients.food] * nutrients$edible_shar
 for (i in 1:length(cookretn.cols)) {
   nutrientName <- substr(x = cookretn.cols[i], 1, nchar(cookretn.cols[i])-3)
   nutColName <- paste ("nutrients$",nutrientName,sep="")
-  print(nutColName)
+#  print(nutColName)
   nutRetentColName <- paste ("nutrients$",cookretn.cols[i],sep="")
-  print(nutRetentColName)
+#  print(nutRetentColName)
   temp <- as.data.frame(eval(parse(text = nutRetentColName)) * eval(parse(text = nutColName)) /100)
   colnames(temp) <- nutrientName
   nutrients[, nutrientName] <- temp
@@ -93,9 +96,6 @@ colsToRemove <- c("edible_share","IMPACT_conversion",cookretn.cols)
 nutrients <- nutrients[,!(names(nutrients) %in% colsToRemove)]
 
 # add food groups and staples codes to the nutrients table ---
-commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.xlsx"
-
-# add food groups and staples codes to the nutrients table
 foodGroupsInfo <- read.xlsx(commodityFoodGroupLookupFileName, 
                             sheet = 1,
                             startRow = 1,

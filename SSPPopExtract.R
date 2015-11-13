@@ -26,41 +26,46 @@ require(splitstackshape)
 require(plotrix)
 setwd("~/Documents/workspace/nutrientModeling")
 
-# file names -------------------------------------------------------------------
 
-IMPACTregionsFileName <- "data/IMPACTRegionsJan2015.xlsx"
-SSPdataZipFileLocation <- c("data/SSPData/SspDb_country_data_2013-06-12.csv.zip")
-SSPdataZipFileName <- c("SspDb_country_data_2013-06-12.csv") #the name of the file inside the zip
+# generate the nutrient requirements data frames
+source("EARfoodGroupCSEloading.R") # this script also runs nutrientDataLoading.R
+
+#list of years to keep
+yearList <- c("X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050")
 
 # Read in and manipulate the SSP data -------------------------------------
-
-SSP <- read.csv(unz(description = SSPdataZipFileLocation, file=SSPdataZipFileName), stringsAsFactors=FALSE)
-#remove years 1950 to 1995 and 2105 to 2150 because they are all NAs. In addition, NCAR has NA for 2000 and 2005.
-#Remove years X2000 and X2005 later because they are NA for pop values
-# keepCols <- c("MODEL", "SCENARIO", "REGION", "VARIABLE","UNIT","X2000","X2005","X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050","X2055","X2060","X2065","X2070","X2075","X2080","X2085","X2090","X2095","X2100")
-# SSPDat.1 <- SSPDat[,keepCols]
-#This code does the same thing, is fast, and clean
-SSP  <- SSP[,!sapply(SSP,function(x) all(is.na(x)))]
-
-colnames(SSP)[1:5] <- c("model", "scenario", "region", "variable","unit") # convert to lower case
-
+if (!file.exists("data/SSPclean.Rdata")){
+  # - if a clean .Rdata file doesn't exist, read in csv file, once, do some manipulation and save as an .rdata file
+  SSP <- read.csv(unz(description = SSPdataZipFileLocation, file=SSPdataZipFileName), 
+                  stringsAsFactors=FALSE)
+  #Years 1950 to 1995 and 2050 to 2100 because they are all NAs. In addition, NCAR has NA for 2000 and 2005.
+  #Remove years X2000 and X2005  because they are NA for pop values
+  SSP  <- SSP[,!sapply(SSP,function(x) all(is.na(x)))]
+  #make all names lower case
+  names(SSP)[1:5] <- tolower(names(SSP)[1:5])
+  #drop the data after 2050
+  SSP <- SSP[c("model", "scenario", "region","variable",yearList)]
+  #save cleaned up file as an .rdata file
+  save(SSP, file="data/SSPclean.Rdata")
+} else {
+  load(file="data/SSPclean.Rdata")
+}
 # Extract lists of the scenarios, regions, and data variables ------------------------------------
 
-scenarios <- unique(SSP$scenario) #There are 21 scenarios; 4 each for SSP1, 2, 3, and 5 and 5 for SSP 4.
 regions <- unique(SSP$region) #there are 194 regions
 vNames <- unique(SSP$variable)
-
+scenarios <- unique(SSP$scenario) #There are 21 scenarios; 4 each for SSP1, 2, 3, and 5 and 5 for SSP 4.
+#This is the list of SSP3 scenarios
 #"SSP3_v9_130424" is from PIK and just for the US
 #"SSP3_v9_130325" is from OECD and is just GDP and population
 #"SSP3_v9_130219" is from IIASA and is just population and GDP
 #"SSP3_v9_130115" combine info from IIASA on population broken down by age, gender, and education and
 #   NCAR on population broken down by rural and urban. The IIASA data are from 2010 to 2100
 
-#work with only one scenario for now, from IIASA for the age and gender breakdown and for the years 2010 to 2050
+#work with only one SSP3 scenario for now, from IIASA for the age and gender breakdown and for the years 2010 to 2050
 scenario3 <- "SSP3_v9_130115"
 model <- "IIASA-WiC POP"
-yearList <- c("X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050")
-SSP3Dat <- SSP[SSP$scenario == scenario3 & SSP$model == model,c("region","variable",yearList)]
+ssp3 <- SSP[SSP$scenario == scenario3 & SSP$model == model,]
 
 # Create population-only data set by removing rows with education breakdown and GDP -----
 popList <- "Population"
@@ -88,34 +93,36 @@ genderList <-c("Male","Female")
 #This code is much cleaner than the above, if a bit less transparent. Not needed at the moment so commented out.
 #for (i in seq(2015,2095,10)) SSPDat.NCAR[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
 
-population.IIASA <- SSP3Dat[SSP3Dat$variable == "Population",c("region",yearList)] #keep this around for bug checking later
-population.IIASA <- population.IIASA[order(population.IIASA$region),] #alphabetize by region
+#keep full population count around for bug checking later
+ssp3.pop.tot.IIASA <- ssp3[ssp3$variable == "Population",c("region",yearList)]
+ssp3.pop.tot.IIASA <- ssp3.pop.tot.IIASA[order(ssp3.pop.tot.IIASA$region),] #alphabetize by region
 # Remove the aggregates of 
 # "Population", "Population|Female" and "Population|Male"
 removeList <- c("Population", "Population|Female", "Population|Male")
-pop3.IIASA <-SSP3Dat[!SSP3Dat$variable %in% removeList,]
+ssp3.pop.IIASA <-ssp3[!ssp3$variable %in% removeList,]
 
 #split the variable names apart where there is a | (eg. X|Y becomes X and Y and new columns are created)
-pop3.IIASA <- as.data.frame(cSplit(pop3.IIASA, 'variable', sep="|", type.convert=FALSE))
+ssp3.pop.IIASA <- as.data.frame(cSplit(ssp3.pop.IIASA, 'variable', sep="|", type.convert=FALSE))
 
 #name the new columns created by the spliting process above
-names(pop3.IIASA)[12:14] <- c("gender","age","education")
+colnames(ssp3.pop.IIASA)[colnames(ssp3.pop.IIASA) == c("variable_1","variable_2","variable_3","variable_4")] <- 
+  c("population","gender","ageGenderCode","education")
 
-#rename variables to align with the EAR names
-pop3.IIASA$age<- gsub("Aged","",pop3.IIASA$age)
-pop3.IIASA$age[pop3.IIASA$gender == "Female"] <- paste("SSPF", pop3.IIASA$age[pop3.IIASA$gender == "Female"], sep="")
-pop3.IIASA$age[pop3.IIASA$gender == "Male"] <- paste("SSPM", pop3.IIASA$age[pop3.IIASA$gender == "Male"], sep="")
-pop3.IIASA$age<- gsub("-","_",pop3.IIASA$age)
-pop3.IIASA$age<- gsub("\\+","Plus",pop3.IIASA$age)
-pop3.IIASA <- pop3.IIASA[order(pop3.IIASA$region),] 
+#rename variables to align with the requirements names
+ssp3.pop.IIASA$ageGenderCode<- gsub("Aged","",ssp3.pop.IIASA$ageGenderCode)
+ssp3.pop.IIASA$ageGenderCode[ssp3.pop.IIASA$gender == "Female"] <- paste("SSPF", ssp3.pop.IIASA$ageGenderCode[ssp3.pop.IIASA$gender == "Female"], sep="")
+ssp3.pop.IIASA$ageGenderCode[ssp3.pop.IIASA$gender == "Male"] <- paste("SSPM", ssp3.pop.IIASA$ageGenderCode[ssp3.pop.IIASA$gender == "Male"], sep="")
+ssp3.pop.IIASA$ageGenderCode<- gsub("-","_",ssp3.pop.IIASA$ageGenderCode)
+ssp3.pop.IIASA$ageGenderCode<- gsub("\\+","Plus",ssp3.pop.IIASA$ageGenderCode)
+ssp3.pop.IIASA <- ssp3.pop.IIASA[order(ssp3.pop.IIASA$region),] 
 
 #remove rows that breakdown an age group by education
 removeList <- c("No Education","Primary Education", "Secondary Education", "Tertiary Education")
-pop3.IIASA <-pop3.IIASA[!pop3.IIASA$education %in% removeList,]
+ssp3.pop.IIASA <-ssp3.pop.IIASA[!ssp3.pop.IIASA$education %in% removeList,]
 
 #remove extraneous columns and keep only the ones needed
-keepList <- c("region", "age", yearList)
-pop3.IIASA <-pop3.IIASA[,keepList]
+keepList <- c("region", "ageGenderCode", yearList)
+ssp3.pop.IIASA <-ssp3.pop.IIASA[,keepList]
 
 # start process of creating a separate list for pregnant and lactating (P/L) women----
 #this list is for females who could be pregnant and lactating and have for the most part 
@@ -125,27 +132,25 @@ ageRowsToSum <- c("SSPF15_19", "SSPF20_24",
                   "SSPF35_39", "SSPF40_44", "SSPF45_49")
 
 #pull out the relevant rows
-temp.F15_49 <- pop3.IIASA[pop3.IIASA$age %in% ageRowsToSum,c("region",yearList)] #also gets rid of age column
+ssp3.pop.F15_49.IIASA <- ssp3.pop.IIASA[ssp3.pop.IIASA$ageGenderCode %in% ageRowsToSum,c("region","ageGenderCode",yearList)] 
 
 #sum the relevant rows (females aged 15-49 as those that could be pregnant or lactating) by region
-dttmp <- data.table(temp.F15_49)
-setkey(dttmp,"region")
-preg.potential <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
+dt.tmp <- data.table(ssp3.pop.F15_49.IIASA)
+ssp3.pop.F15_49.sum.IIASA <- as.data.frame(dt.tmp[,lapply(.SD,sum),by=region, .SDcols = yearList])
 #add age column with the single value for the new age group
-preg.potential$age <- rep("SSPF15_49",nrow(preg.potential))
-#get rid of now extraneous rows in pop3.IIASA so no double counting
-pop3.IIASA <- pop3.IIASA[!pop3.IIASA$age %in% ageRowsToSum,]
-#add the SSPF15_49 row to pop3.IIASA
-pop3.IIASA <- rbind(pop3.IIASA,preg.potential)
+ssp3.pop.F15_49.sum.IIASA$ageGenderCode <- rep("SSPF15_49",nrow(ssp3.pop.F15_49.sum.IIASA))
+#get rid of now extraneous rows in ssp3.pop.IIASA so no double counting
+ssp3.pop.IIASA <- ssp3.pop.IIASA[!ssp3.pop.IIASA$ageGenderCode %in% ageRowsToSum,]
+#add the SSPF15_49 row to ssp3.pop.IIASA
+ssp3.pop.IIASA <- rbind(ssp3.pop.IIASA,ssp3.pop.F15_49.sum.IIASA)
 #sort by region
-pop3.IIASA <- pop3.IIASA[order(pop3.IIASA$region),] 
+ssp3.pop.IIASA <- ssp3.pop.IIASA[order(ssp3.pop.IIASA$region),] 
 
 #check to see if population totals are the same. Uncomment to test
-dttmp <- data.table(pop3.IIASA)
-dttmp$age <- NULL
-setkey(dttmp,"region")
-pop.temp <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
-temp <- pop.temp$X2010 - population.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
+dt.tmp <- data.table(ssp3.pop.IIASA)
+setkey(dt.tmp,"region")
+pop.temp <- as.data.frame(dt.tmp[,lapply(.SD,sum),by=region, .SDcols = yearList])
+temp <- pop.temp$X2010 - ssp3.pop.tot.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
 summary(temp) #the differences should be very small
 
 #now estimate the number of pregnant women and lactating women and add them
@@ -153,153 +158,219 @@ summary(temp) #the differences should be very small
 #sum boys and girls 0 to 4
 kidsRows <- c("SSPF0_4","SSPM0_4")
 #create a temporary data frame with just those rows
-age.kids <- pop3.IIASA[pop3.IIASA$age %in% kidsRows,c("region",yearList)]
-dttmp <- data.table(age.kids)
-setkey(dttmp,"region")
-temp.kids <- dttmp[,lapply(.SD,sum),by=region]
+kids.0_4 <- ssp3.pop.IIASA[ssp3.pop.IIASA$ageGenderCode %in% kidsRows,c("region",yearList)]
+dt.kids.0_4 <- data.table(kids.0_4)
+setkey(dt.kids.0_4,"region")
+dt.kids.sum <- dt.kids.0_4[,lapply(.SD,sum),by = "region"]
+#setkey(dt.kids.sum,"region")
 
 #pregnant and lactating women are a constant share of kids 0 to 4. This is a *kludge*!!!
 share.preg <- 0.2
 share.lact <- 0.2
-temp.preg <- as.data.frame(temp.kids[,lapply(.SD, function(x) x * share.preg),by=region])
-temp.lact <- as.data.frame(temp.kids[,lapply(.SD, function(x) x * share.lact),by=region])
+temp.preg <- as.data.frame(dt.kids.sum[,lapply(.SD, function(x) x * share.preg),by="region"])
+temp.lact <- as.data.frame(dt.kids.sum[,lapply(.SD, function(x) x * share.lact),by="region"])
 
 #delete number of potentially pregnant and lactating women so no double counting
 removeList <- c("SSPF15_49")
-pop3.IIASA <-pop3.IIASA[!pop3.IIASA$age %in% removeList,]
+ssp3.pop.IIASA <-ssp3.pop.IIASA[!ssp3.pop.IIASA$ageGenderCode %in% removeList,]
 
 #add back number of non PL women
-dttmp <- as.data.table(preg.potential)
-dttmp2 <- as.data.table(temp.preg)
-setkey(dttmp,"region")
+dt.tmp <- as.data.table(ssp3.pop.F15_49.sum.IIASA)
+dt.tmp2 <- as.data.table(temp.preg)
+setkey(dt.tmp,"region")
 
 cols <- paste0("X",seq(2010,2050,5))
-temp.nonPL <- preg.potential[match(temp.preg$region,preg.potential$region),cols] - 
+temp.nonPL <- ssp3.pop.F15_49.sum.IIASA[match(temp.preg$region,ssp3.pop.F15_49.sum.IIASA$region),cols] - 
   temp.preg[,cols] - 
   temp.lact[match(temp.preg$region,temp.lact$region),cols] 
-temp.nonPL$region <- preg.potential$region
+temp.nonPL$region <- ssp3.pop.F15_49.sum.IIASA$region
 #add age column for the new P/L variables; also to temp.kids to be consistent
-temp.kids <- cbind(age.kids,age = "SSPKids0_4", stringsAsFactors = FALSE)
-temp.preg <- cbind(temp.preg,age = "SSPPreg", stringsAsFactors = FALSE)
-temp.lact <- cbind(temp.lact,age = "SSPLact", stringsAsFactors = FALSE)
-temp.nonPL <- cbind(temp.nonPL,age = "SSPF15_49", stringsAsFactors = FALSE)
+temp.kids <- cbind(dt.kids.sum,ageGenderCode = "SSPKids0_4", stringsAsFactors = FALSE)
+temp.preg <- cbind(temp.preg,ageGenderCode = "SSPPreg", stringsAsFactors = FALSE)
+temp.lact <- cbind(temp.lact,ageGenderCode = "SSPLact", stringsAsFactors = FALSE)
+temp.nonPL <- cbind(temp.nonPL,ageGenderCode = "SSPF15_49", stringsAsFactors = FALSE)
 
-#add new rows to pop3.IIASA
-pop3.IIASA <- rbind(pop3.IIASA,temp.preg,temp.lact,temp.nonPL)
-pop3.IIASA <- pop3.IIASA[with(pop3.IIASA, order(region, age)), ]
+#add new rows to ssp3.pop.IIASA
+ssp3.pop.IIASA <- rbind(ssp3.pop.IIASA,temp.preg,temp.lact,temp.nonPL)
+ssp3.pop.IIASA <- ssp3.pop.IIASA[with(ssp3.pop.IIASA, order(region, ageGenderCode)), ]
 
 #check to see if population totals are the same. Uncomment to test
-population.IIASA <- population.IIASA[order(population.IIASA$region),] 
-dttmp <- data.table(pop3.IIASA)
-dttmp$age <- NULL
-setkey(dttmp,"region")
-pop.temp <- as.data.frame(dttmp[,lapply(.SD,sum),by=region])
-temp <- pop.temp$X2010 - population.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
+ssp3.pop.tot.IIASA <- ssp3.pop.tot.IIASA[order(ssp3.pop.tot.IIASA$region),] 
+dt.tmp <- data.table(ssp3.pop.IIASA)
+setkey(dt.tmp,"region")
+pop.temp <- as.data.frame(dt.tmp[,lapply(.SD,sum),by=region, .SDcols = yearList])
+temp <- pop.temp$X2010 - ssp3.pop.tot.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
 summary(temp) #the differences should be very small
 
-dt.pop <- as.data.table(pop3.IIASA)
-dt.pop.melt <- melt(dt.pop,variable.name = "year", id.vars = c("region","age"), measure.vars = yearList, value.name = "pop.value")
-dt.pop.melt[,year:=as.character(year),]
-setkey(dt.pop.melt,"age")
+dt.pop <- as.data.table(ssp3.pop.IIASA)
+dt.pop.melt <- melt(dt.pop,variable.name = "year",variable.factor = FALSE, 
+                    id.vars = c("region","ageGenderCode"), measure.vars = yearList, value.name = "pop.value")
 
-#starter dt
-dt.regionYear <- unique(dt.pop.melt[,c("region","year"),with=F]) 
-
-#add total pop column to starter dt
-setkey(dt.regionYear,"region","year")
-dt.pop.IIASA <- as.data.table(population.IIASA)
-dt.pop.IIASA.melt <- melt(dt.pop.IIASA,id.vars = "region", 
-                          measure.vars = yearList, variable.name = "year", 
-                          value.name = "pop.tot")
-dt.pop.IIASA.melt[,year:=as.character(year),]
-dt.regionYear <- dt.regionYear[dt.pop.IIASA.melt]
-setkey(dt.regionYear,"region","year")
+repCons <- function(nutReq,common.nut) {
+  #remove the nutrient requirements for the female age groups in ageRowsToSum because they are already in SSPF15_49
+  nutReq <- nutReq[!(nutReq$ageGenderCode %in% ageRowsToSum),]
+  setkey(dt.pop.melt,"ageGenderCode")
+  dt.temp <- dt.pop.melt[data.table(nutReq)]
+  dt.temp[, (paste(common.nut,"prod",sep=".")):= lapply(.SD, function(x) x*dt.temp$pop.value), .SDcols=c(common.nut)]
+  setkey(dt.temp,"region","year")
+  reqlist <- paste(common.nut,"prod",sep=".")
+  dt.temp[, (paste(common.nut,"sum",sep=".")):= lapply(.SD, sum), by=c("region","year"), .SDcols=c(reqlist) ]
+  #remove the .prod columns
+  dt.temp[,c(reqlist):= NULL]
+  dt.temp.sum <- unique(dt.temp[,c("region","year",paste(common.nut,"sum",sep=".")),with=F])
+  
+  dt.pop.IIASA <- as.data.table(ssp3.pop.tot.IIASA)
+  dt.pop.IIASA.melt <- melt(dt.pop.IIASA,id.vars = "region", 
+                            measure.vars = yearList, variable.name = "year", variable.factor = FALSE,
+                            value.name = "pop.tot")
+  setkey(dt.pop.IIASA.melt,"region","year")
+  dt.temp <- dt.pop.IIASA.melt[dt.temp.sum]
+  # paste(common.nut,"fin",sep=".")
+  dt.temp[, (paste(common.nut,"fin",sep=".")):= lapply(.SD, function(x) x/dt.temp$pop.tot), .SDcols=c(paste(common.nut,"sum",sep="."))]
+  dt.temp[,c("pop.tot",paste(common.nut,"sum",sep=".")):= NULL]
+  dt.temp.melt <- melt(dt.temp,id.vars = c("region","year"), 
+                       measure.vars = paste(common.nut,"fin",sep="."), variable.name = "nutrient", variable.factor = FALSE,
+                       value.name = "value")
+  return(dcast.data.table(dt.temp.melt,region + nutrient ~ year,value.var="value"))
+  # #convert every 5 years data to every year. this is not working so commented out.
+  # setkey(dt.temp.dcast,"region","nutrient")
+  # yrs <- seq(2010,2050,5)
+  # lin.interp <- function(y,yrs) predict(lm(y~yrs),data.frame(yrs=min(yrs):max(yrs)))
+  # dt.temp.dcast[, paste0("X",min(yrs):max(yrs)):= apply(.SD,FUN = lin.interp, yrs, MARGIN = 1), .SDcols = yearList, key=dt.temp.dcast]
+  # 
+  # p1 <- as.data.frame(apply(temp.preg[,2:4],1,lin.interp,yrs))
+  # names(p1) <- paste0("X",min(yrs):max(yrs))
+}
 
 #nutrient requirements are calculated in EARfoodGroupCSEloading.R. the next line is a list as of Oct 26
-#reqs <- c("req.EAR","req.RDA.vits","req.RDA.minrls","req.RDA.macro","req.UL.vits","req.UL.minrls")
-#The list of variables for each is common.EAR, common.RDA.vits, common.RDA.minrls, common.RDA.macro, common.UL.vits, 
+reqs <- c("req.EAR","req.RDA.vits","req.RDA.minrls","req.RDA.macro","req.UL.vits","req.UL.minrls")
+#The list of nutrients for each is common.EAR, common.RDA.vits, common.RDA.minrls, common.RDA.macro, common.UL.vits, 
 #        common.UL.minrls, common.AMDR
- # get nutrient requirements for representative consumer by requirement type  ----
-type.list <- c("common.EAR", "common.RDA.vits", "common.RDA.minrls", "common.RDA.macro", "common.UL.vits", 
-"common.UL.minrls")
-for (req.type in type.list) {
-  for (nutrient in req.type) {
-    dt.nut <- as.data.table(EARs[grep(nutrient,EARs$NutCode),])
-    print(nutrient)
-    dt.nut[,nutNames.Units:=NULL]
-    dt.nut.melt <- melt(dt.nut,variable.name = "age", id.vars = "NutCode", 
-                        value.name = "nut.value", stringsAsFactors = FALSE) 
-    dt.nut.melt[,age:=as.character(age)]
-    dt.nut.melt[,NutCode:=NULL]
-    setkey(dt.nut.melt,"age")
-    #merge dt.pop.melt and dt.nut.melt
-    dt.pop.nut <- dt.pop.melt[dt.nut.melt] 
-    setkey(dt.pop.nut,"region","year")
-    dt.pop.nut[,val:=sum(pop.value*nut.value),by=key(dt.pop.nut)]
-    xx <- unique(dt.pop.nut[,c("region","year","val"),with=F])
-    dt.regionYear <- dt.regionYear[xx] #tot amount of nutrient needed by all (sum of nutrient needed by age group over all age groups)
-    dt.regionYear[,percapval:=val/pop.tot,by=key(dt.regionYear)]
-    #  setkey(dt.regionYear,"region","year")
-    setnames(dt.regionYear,"val",nutrient)
-    setnames(dt.regionYear,"percapval",paste(nutrient,"_percap",sep=""))
-  }
+common <- c("common.EAR", "common.RDA.vits", "common.RDA.minrls", "common.RDA.macro", "common.UL.vits", 
+            "common.UL.minrls")
+# for loop to write out the nutrient requirements files
+wbGeneral <- createWorkbook()
+numStyle <- createStyle(numFmt = "0.00")
+textStyle <- createStyle(fontName = NULL, fontSize = NULL, fontColour = NULL,
+                         numFmt = "GENERAL", border = NULL,
+                         borderColour = getOption("openxlsx.borderColour", "black"),
+                         borderStyle = getOption("openxlsx.borderStyle", "thin"), bgFill = NULL,
+                         fgFill = NULL, halign = "left", valign = NULL, textDecoration = NULL,
+                         wrapText = FALSE, textRotation = NULL)
+#create a worksheet with info on creator, date, model version, etc.
+creationInfo <- ("Information on creator, date, model version, etc.")
+creationInfo <- rbind(creationInfo, paste("Creator:", userName))
+creationInfo <- rbind(creationInfo, paste("Date of file creation:", Sys.Date()))
+#creationInfo <- rbind(creationInfo, paste("IMPACT data:", IMPACTfileName))
+creationInfo <- rbind(creationInfo, paste("Nutrient data:", nutrientFileName))
+creationInfo <- rbind(creationInfo, paste("Nutrient requirements data:", EARFileName))
+creationInfo <- rbind(creationInfo, paste("SSP data:", SSPdataZipFileName))
+addWorksheet(wbGeneral, sheetName="creation_Info")
+writeData(wbGeneral, creationInfo, sheet="creation_Info", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+class(wbInfoGeneral$sheet_Name) <- 'hyperlink'
+wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("creation_Info", "Information on creator, date, model version, etc.")
+
+#Set up a dataframe to collect common worksheet names and descriptions. 
+wbInfoGeneral <- data.frame(sheet_Name=character(),sheet_Desc=character(), stringsAsFactors = FALSE)
+#convert wbInfoGeneral sheet_Name column to class hyperlink
+wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("Sheet names", "Description of sheet contents")
+
+#create a worksheet with info on the commodities and nutrients
+addWorksheet(wbGeneral,sheetName="IMPACTCommdlist")
+#commodityNames <- cbind(nutrients[c("Name","IMPACT_code")])
+writeData(wbGeneral, nutrients, sheet="IMPACTCommdlist", startRow=1, startCol=1)
+wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("IMPACTCommdList", "IMPACT commodities and their nutrient content")
+
+addWorksheet(wbGeneral, sheetName="MetaDataNutrnts")
+writeData(wbGeneral, req.metadata, sheet="MetaDataNutrnts", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("MetaDataNutrnts", "Information about the requirements sources")
+
+for (i in 1:length(reqs)) {
+  nutReq <- paste(reqs[i],"ssp",sep=".")
+  dt.temp.internal <- repCons(eval(parse(text = nutReq)),eval(parse(text = common[i])))
+  setkey(dt.temp.internal,"nutrient","region")
+  
+  dt.temp.internal$nutrient <- gsub(".fin", "", dt.temp.internal$nutrient)
+  
+  dt.name <- paste(reqs[i],"percap",sep=".")
+  print(dt.name)
+  addWorksheet(wbGeneral, sheetName=dt.name)
+  addStyle(wbGeneral, sheet=dt.name, style=numStyle, rows = 2:nrow(dt.temp.internal), cols=3:(ncol(dt.temp.internal)), gridExpand = TRUE)
+  writeData(wbGeneral, dt.temp.internal, sheet=dt.name, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
+  nutrientList <- gsub(" ",", ",paste((eval(parse(text = common[i]))),collapse = " "))
+  sheetDesc <- paste("nutrients included: ",nutrientList)
+  wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c(dt.name, sheetDesc)
+  
+  assign(dt.name,dt.temp.internal)
+  #  setnames(dt.temp.internal,dt.temp.internal,dt.name)
+  fname <- paste("results/",dt.name,".csv",sep="")
+  print(fname)
+  write.csv(eval(parse(text = dt.name)),file = fname, fileEncoding = "macroman")
+  #fileEncoding = "Windows-1252"
 }
-temp <- melt(dt.regionYear,id.vars=c("region","year"),measure.vars = c("energy_percap", "protein_percap", "fat_percap", 
-             "carbohydrate_percap", "fiber_percap", 
-             "calcium_percap", "iron_percap", "magnesium_percap",  "phosphorus_percap",
-             "potassium_percap",     "sodium_percap","zinc_percap",   
-             "vit_c_percap",    "thiamin_percap",  "riboflavin_percap","niacin_percap", "vit_b6_percap", "folate_percap", 
-             "vit_b12_percap", "vit_a_IU_percap", "vit_e_percap", "vit_d_percap"),
-             variable.name = "nutrient", value.name = "percapEAR")
 
-temp[,nutrient:=as.character(nutrient)]
-temp.wide <- dcast(temp, region +  nutrient ~ year, value.var = "percapEAR")
-# energy_percap + protein_percap + fat_percap + 
-# carbohydrate_percap + fiber_percap + 
-#   calcium_percap + iron_percap + magnesium_percap +  phosphorus_percap +
-#   potassium_percap +     sodium_percap +zinc_percap +   
-#   vit_c_percap +    thiamin_percap +  riboflavin_percap +niacin_percap + vit_b6_percap + folate_percap + 
-#   vit_b12_percap + vit_a_IU_percap + vit_e_percap + vit_d_percap
-write.csv(dt.regionYear, file = "results/regionyear.csv")
-write.csv(temp.wide, file = "results/repConsumerByYear.csv")
+#add sheet with info about each of the worksheets
+addWorksheet(wbGeneral, sheetName="sheetInfo")
+writeData(wbGeneral, wbInfoGeneral, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+addStyle(wbGeneral, sheet="sheetInfo", style=textStyle, rows = 1:nrow(wbInfoGeneral), cols=1:(ncol(wbInfoGeneral)), gridExpand = TRUE)
+setColWidths(wbGeneral, sheet="sheetInfo", cols = 1:2, widths=20)
 
+#move sheetInfo worksheet from the last to the first
+temp<- 2:length(names(wbGeneral))-1
+temp <- c(length(names(wbGeneral)),temp)
+worksheetOrder(wbGeneral) <- temp
 
-#convert every 5 years data to every year
-for (i in seq(2010,2050,5)) temp.wide[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
-
-
+xcelOutFileName <- paste("results/nut.requirements",Sys.Date(),".xlsx",sep="")
+saveWorkbook(wbGeneral, xcelOutFileName, overwrite = TRUE)
 #I think everything from here on down is extraneous, but I'm keeping it for now, just commented out.
+# 
+# 
+# for (req.type in type.list) {
+#   for (nutrient in req.type) {
+#     dt.nut <- as.data.table(EARs[grep(nutrient,EARs$NutCode),])
+#     print(nutrient)
+#     dt.nut[,nutNames.Units:=NULL]
+#     dt.nut.melt <- melt(dt.nut,variable.name = "ageGenderCode", id.vars = "NutCode", 
+#                         value.name = "nut.value", stringsAsFactors = FALSE) 
+#     dt.nut.melt[,ageGenderCode:=as.character(ageGenderCode)]
+#     dt.nut.melt[,NutCode:=NULL]
+#     setkey(dt.nut.melt,"ageGenderCode")
+#     #merge dt.pop.melt and dt.nut.melt
+#     dt.pop.nut <- dt.pop.melt[dt.nut.melt] 
+#     setkey(dt.pop.nut,"region","year")
+#     dt.pop.nut[,val:=sum(pop.value*nut.value),by=key(dt.pop.nut)]
+#     xx <- unique(dt.pop.nut[,c("region","year","val"),with=F])
+#     dt.regionYear <- dt.regionYear[xx] #tot amount of nutrient needed by all (sum of nutrient needed by age group over all age groups)
+#     dt.regionYear[,percapval:=val/pop.tot,by=key(dt.regionYear)]
+#     #  setkey(dt.regionYear,"region","year")
+#     setnames(dt.regionYear,"val",nutrient)
+#     setnames(dt.regionYear,"percapval",paste(nutrient,"_percap",sep=""))
+#   }
+# }
+# temp <- melt(dt.regionYear,id.vars=c("region","year"),measure.vars = c("energy_percap", "protein_percap", "fat_percap", 
+#                                                                        "carbohydrate_percap", "fiber_percap", 
+#                                                                        "calcium_percap", "iron_percap", "magnesium_percap",  "phosphorus_percap",
+#                                                                        "potassium_percap",     "sodium_percap","zinc_percap",   
+#                                                                        "vit_c_percap",    "thiamin_percap",  "riboflavin_percap","niacin_percap", "vit_b6_percap", "folate_percap", 
+#                                                                        "vit_b12_percap", "vit_a_IU_percap", "vit_e_percap", "vit_d_percap"),
+#              variable.name = "nutrient", value.name = "percapEAR")
+# 
+# temp[,nutrient:=as.character(nutrient)]
+# temp.wide <- dcast(temp, region +  nutrient ~ year, value.var = "percapEAR")
+# # energy_percap + protein_percap + fat_percap + 
+# # carbohydrate_percap + fiber_percap + 
+# #   calcium_percap + iron_percap + magnesium_percap +  phosphorus_percap +
+# #   potassium_percap +     sodium_percap +zinc_percap +   
+# #   vit_c_percap +    thiamin_percap +  riboflavin_percap +niacin_percap + vit_b6_percap + folate_percap + 
+# #   vit_b12_percap + vit_a_IU_percap + vit_e_percap + vit_d_percap
+# write.csv(dt.regionYear, file = "results/regionyear.csv")
+# write.csv(temp.wide, file = "results/repConsumerByYear.csv")
+# 
+# 
+# #convert every 5 years data to every year
+# for (i in seq(2010,2050,5)) temp.wide[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
+# 
 
-# mpop.IIASA <- melt(pop.IIASA, id.vars=c("MODEL","SCENARIO","REGION","UNIT","gender","age","education"),
-#              measure.vars =c("X2010","X2015","X2020","X2025", "X2030","X2035","X2040","X2045",
-#                              "X2050","X2055","X2060","X2065","X2070","X2075", "X2080","X2085",
-#                              "X2090","X2095","X2100"))
-
-# mpop.IIASA <- gather(pop.IIASA,variable,value,X2010:X2100)
-# mpop.IIASA <- mpop.IIASA[,-match(c("X2000","X2005","VARIABLE_1"),names(mpop.IIASA))]
-# 
-# mpop.IIASA.sort <- mpop.IIASA[with( mpop.IIASA, order(SCENARIO, REGION, variable, age)), ]
-# #remove rows with NA in the education column. These are the totals from summing across all the education possibilities.
-# mpop.IIASA.sort.complete <- mpop.IIASA.sort[complete.cases(mpop.IIASA.sort[,"education"]),]
-# 
-# # have women and men be separate columns
-# #mpop.IIASA.sort.complete.wide <- dcast.data.table(mpop.IIASA.sort.complete, MODEL + SCENARIO + UNIT + REGION + age + education + variable ~ gender, mean, value.var = "value")
-# mpop.sort.complete.wide <- spread(mpop.IIASA.sort.complete,gender,value)
-# 
-# # use the inverse to get the pop totals, then have men and women in separate columns, or have columns for each year
-# #mpop.IIASA.sort.tot <- mpop.IIASA.sort[!complete.cases(mpop.IIASA.sort[,"education"]),]
-# mpop.IIASA.sort.tot <- mpop.IIASA.sort[is.na(mpop.IIASA.sort$education),]
-# 
-# #mpop.IIASA.sort.gender <- dcast.data.table(mpop.IIASA.sort.tot, MODEL + SCENARIO + UNIT + REGION + age + education + variable ~ gender, mean, value.var = "value")
-# mpop.IIASA.sort.gender <- spread(mpop.IIASA.sort.tot,gender,value)
-# 
-# #pop.IIASA.tot.years <- dcast.data.table(mpop.IIASA.sort.tot, MODEL + SCENARIO + UNIT + REGION + age + gender ~ variable, mean, value.var = "value")
-# pop.IIASA.tot.years <- spread(mpop.IIASA.sort.tot,variable,value)
-# 
-# regions.NCAR <- data.frame(CTY=sort(unique(SSPDat.NCAR$REGION)))
-# #regions.IIASA <- as.data.frame(regions.IIASA); colnames(regions.IIASA)[1]<-"CTY"; regions.IIASA$CTY <- sort(regions.IIASA$CTY)
-# regions.IIASA <- data.frame(CTY=sort(unique(SSPDat.IIASA$REGION)))
-# 
 # # get the regions used by IMPACT
 # regions.IMPACT <- read.xlsx(IMPACTregionsFileName, colNames = TRUE, sheet = 1)
 # 
