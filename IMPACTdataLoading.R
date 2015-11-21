@@ -20,6 +20,14 @@ source("setup.R")
 # colnames(IMPACTfoodCommodities) <- "IMPACT_code"
 
 daysInYear <- 365 #see http://stackoverflow.com/questions/9465817/count-days-per-year for a way to deal with leap years
+
+# read in the CSEs ---------------------------------------------
+CSEs <- read.xlsx(CSEFileName, 
+                  sheet = 1,
+                  cols = 1:3,
+                  colNames = TRUE)
+colnames(CSEs) <- c("region","IMPACT_code","CSE")
+
 ## IMPACT commodity file readin and cleanup -------------------------------
 t1 <-read.csv(IMPACTfileName, stringsAsFactors = FALSE, 
               col.names = c("IMPACTparameter", "scenario", "IMPACT_code" , "region","productiontype", 
@@ -61,6 +69,7 @@ dt.t1[,productiontype := NULL]
 #Note to self: still need to aggregate to new regions for IMPACT
 #store per cap GDP 
 dt.t1.pcGDP <- dt.t1[IMPACTparameter == "pcGDPXAgg -- Per Capita Income"]
+
 
 #keep only food items
 dt.t1.food <- dt.t1[IMPACT_code %in% IMPACTfoodCommodList]
@@ -121,6 +130,11 @@ setorder(dt.pcFoodAvail,scenario, region, IMPACT_code, year)
 dt.pcFoodAvail[ ,`:=`(IMPACTparameter = NULL)]
 setnames(dt.pcFoodAvail,"value","food")
 
+setorder(dt.t1.pcGDP,scenario, region, IMPACT_code, year)
+dt.t1.pcGDP[ ,`:=`(IMPACTparameter = NULL)]
+dt.t1.pcGDP[ ,`:=`(IMPACT_code = NULL)]
+setnames(dt.t1.pcGDP,"value","pcGDP")
+
 # setkey(dt.pcFoodAvail,"scenario","region","IMPACT_code", "year")
 # #this adds a column for food that is identical to value. Now done above
 # dt.pcFoodAvail[,food:=mean(value),by=key(dt.pcFoodAvail)]
@@ -130,13 +144,17 @@ setnames(dt.pcFoodAvail,"value","food")
 dt.CSEs <- as.data.table(CSEs)
 setorder(dt.CSEs,"scenario", "region","IMPACT_code","CSE")
 
-dtList <- list(dt.pcFoodAvail,dt.Pc,dt.Pw, dt.CSEs)
+dtList <- list(dt.pcFoodAvail,dt.t1.pcGDP,dt.Pc,dt.Pw, dt.CSEs)
 setkey(dt.pcFoodAvail,"scenario","region","IMPACT_code")
 setkey(dt.Pw,"scenario","IMPACT_code")
 setkey(dt.CSEs,"region","IMPACT_code")
 setkey(dt.Pc,"scenario","region","IMPACT_code")
+setkey(dt.t1.pcGDP,"scenario","region")
 
 dt.df1 <- join_all(dtList)
+#replace NAs in CSE with zeros
+set(dt.df1,which(is.na(dt.df1[["CSE"]])),"CSE",0)
+
 
 saveRDS(dt.df1, file="data/IMPACTdatatable.rds")
 # I think everything below here is now extraneous but I leave it just in case

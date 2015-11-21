@@ -15,26 +15,16 @@
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 
-require(openxlsx)
-require(entropy)
-require(reshape2)
-require(plyr)
-require(dplyr)
-require(tidyr)
-require(data.table)
-require(splitstackshape)
-require(plotrix)
-setwd("~/Documents/workspace/nutrientModeling")
-
+source("setup.R")
 
 # generate the nutrient requirements data frames
 source("EARfoodGroupCSEloading.R") # this script also runs nutrientDataLoading.R
 
-#list of years to keep
-yearList <- c("X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050")
+#list of years to keep; moved to setup.R
+#yearList <- c("X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050")
 
 # Read in and manipulate the SSP data -------------------------------------
-if (!file.exists("data/SSPclean.Rdata")){
+if (!file.exists("data/SSPclean.rds")){
   # - if a clean .Rdata file doesn't exist, read in csv file, once, do some manipulation and save as an .rdata file
   SSP <- read.csv(unz(description = SSPdataZipFileLocation, file=SSPdataZipFileName), 
                   stringsAsFactors=FALSE)
@@ -46,13 +36,45 @@ if (!file.exists("data/SSPclean.Rdata")){
   #drop the data after 2050
   SSP <- SSP[c("model", "scenario", "region","variable",yearList)]
   #save cleaned up file as an .rdata file
-  save(SSP, file="data/SSPclean.Rdata")
+  saveRDS(SSP, file="data/SSPclean.rds")
 } else {
-  load(file="data/SSPclean.Rdata")
+  SSP <- readRDS(file="data/SSPclean.rds")
+}
+
+#now add the new IFPRI regions
+source(file = "RegionsAlignment.R")
+# SSP regions
+regions <- unique(SSP$region) #there are 194 regions
+
+for (j in 1:length(plusRegions)) { # loop through all the plus regions in IMPACT
+  ctyList <- eval(parse(text = plusRegions[j]))
+  for (i in 1:length(ctyList)) { #look at all the country names in a plus region to make sure they are a IIASA country
+    if(!(ctyList[i] %in% regions)) { #identify countries not in IIASA list
+      print(paste(ctyList[i],"from", plusRegions[j], "is not in IIASA countries"))
+    }
+    else {
+      ctyListNew <- c(ctyListNew,ctyList[i])
+    }
+  }
+  print(paste(ctyListNew, " is in ctyListNew for", plusRegions[j]))
+  #construct column names by adding the df name to the front of the cty name.
+  ctyList <- gsub("^","pop.IIASA.wide$",ctyListNew)
+  
+  #convert the list into an expression that sums across the cty columns that are in the IIASA data, 
+  # and that make up the IMPACT region
+  pop.IIASA.wide$tmp <- eval(parse(text = paste(ctyList, sep = "", collapse=" + ")))
+  income.IIASA.wide$tmp <- eval(parse(text = paste(ctyList, sep = "", collapse=" + ")))
+  #Give the tmp column its correct name
+  names(pop.IIASA.wide)[names(pop.IIASA.wide)=="tmp"] <- plusRegions[j]
+  names(income.IIASA.wide)[names(income.IIASA.wide)=="tmp"] <- plusRegions[j]
+  #Now remove the countries that make up the IMPACT plus region
+  #ctyListNew.as.c <- c(paste(ctyListNew, sep = "\", collapse=" , "
+  pop.IIASA.wide <- pop.IIASA.wide[,!(names(pop.IIASA.wide) %in% ctyListNew)]
+  income.IIASA.wide <- income.IIASA.wide[,!(names(income.IIASA.wide) %in% ctyListNew)]
+  
 }
 # Extract lists of the scenarios, regions, and data variables ------------------------------------
 
-regions <- unique(SSP$region) #there are 194 regions
 vNames <- unique(SSP$variable)
 scenarios <- unique(SSP$scenario) #There are 21 scenarios; 4 each for SSP1, 2, 3, and 5 and 5 for SSP 4.
 #This is the list of SSP3 scenarios
@@ -75,23 +97,6 @@ ageList <- c("Aged0-4", "Aged5-9","Aged10-14", "Aged15-19", "Aged20-24", "Aged25
              "Aged90-94", "Aged95-99", "Aged100+")
 edList <- c("No Education", "Primary Education", "Secondary Education", "Tertiary Education")
 genderList <-c("Male","Female")
-# NCAR data are for 10 year periods, starting in 2010 and ending in 2100 and are broken down by Urban and Rural
-# IIASA population data are for 5 year periods, starting in 2010 and ending in 2100 and 
-# are broken down by age, education, and gender
-
-#fill in every fifth year for NCAR with linear interpolation
-# SSPDat.NCAR$X2015 <- (SSPDat.NCAR$X2010 + SSPDat.NCAR$X2020)/2
-# SSPDat.NCAR$X2025 <- (SSPDat.NCAR$X2020 + SSPDat.NCAR$X2030)/2
-# SSPDat.NCAR$X2035 <- (SSPDat.NCAR$X2030 + SSPDat.NCAR$X2040)/2
-# SSPDat.NCAR$X2045 <- (SSPDat.NCAR$X2040 + SSPDat.NCAR$X2050)/2
-# SSPDat.NCAR$X2055 <- (SSPDat.NCAR$X2050 + SSPDat.NCAR$X2060)/2
-# SSPDat.NCAR$X2065 <- (SSPDat.NCAR$X2060 + SSPDat.NCAR$X2070)/2
-# SSPDat.NCAR$X2075 <- (SSPDat.NCAR$X2070 + SSPDat.NCAR$X2080)/2
-# SSPDat.NCAR$X2085 <- (SSPDat.NCAR$X2080 + SSPDat.NCAR$X2090)/2
-# SSPDat.NCAR$X2095 <- (SSPDat.NCAR$X2090 + SSPDat.NCAR$X2100)/2
-
-#This code is much cleaner than the above, if a bit less transparent. Not needed at the moment so commented out.
-#for (i in seq(2015,2095,10)) SSPDat.NCAR[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
 
 #keep full population count around for bug checking later
 ssp3.pop.tot.IIASA <- ssp3[ssp3$variable == "Population",c("region",yearList)]
@@ -303,9 +308,9 @@ for (i in 1:length(reqs)) {
   
   assign(dt.name,dt.temp.internal)
   #  setnames(dt.temp.internal,dt.temp.internal,dt.name)
-  fname <- paste("results/",dt.name,".csv",sep="")
+  fname <- paste("results/",dt.name,".rds",sep="")
   print(fname)
-  write.csv(eval(parse(text = dt.name)),file = fname, fileEncoding = "macroman")
+  saveRDS(eval(parse(text = dt.name)),file = fname)
   #fileEncoding = "Windows-1252"
 }
 
@@ -322,6 +327,8 @@ worksheetOrder(wbGeneral) <- temp
 
 xcelOutFileName <- paste("results/nut.requirements",Sys.Date(),".xlsx",sep="")
 saveWorkbook(wbGeneral, xcelOutFileName, overwrite = TRUE)
+
+
 #I think everything from here on down is extraneous, but I'm keeping it for now, just commented out.
 # 
 # 

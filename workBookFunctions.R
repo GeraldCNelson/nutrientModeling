@@ -1,5 +1,5 @@
 #create some common styles
-numStyle <- createStyle(numFmt = "0.0")
+numStyle <- createStyle(numFmt = "0.00")
 numStyle3 <- createStyle(numFmt = "0.000")
 shareStyle <- createStyle(numFmt = "0.0%")
 textStyle <- createStyle(fontName = NULL, fontSize = NULL, fontColour = NULL,
@@ -11,15 +11,6 @@ textStyle <- createStyle(fontName = NULL, fontSize = NULL, fontColour = NULL,
 
 #function to create the first, common worksheets in the results workbook
 f.createGeneralWorksheet <- function() {
- 
-
-  #Set up a dataframe to collect common worksheet names and descriptions. 
-  wbInfoGeneral <- data.frame(sheet_Name=character(),sheet_Desc=character(), stringsAsFactors = FALSE)
-  #convert wbInfoGeneral sheet_Name column to class hyperlink
-  class(wbInfoGeneral$sheet_Name) <- 'hyperlink'
-  wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("Sheet names", "Description of sheet contents")
-  
-  #create workbook with general info
   wbGeneral <- createWorkbook()
   
   #create a worksheet with info on creator, date, model version, etc.
@@ -29,57 +20,64 @@ f.createGeneralWorksheet <- function() {
   creationInfo <- rbind(creationInfo, paste("IMPACT data:", IMPACTfileName))
   creationInfo <- rbind(creationInfo, paste("Nutrient data:", nutrientFileName))
   creationInfo <- rbind(creationInfo, paste("Nutrient requirements data:", EARFileName))
-  
+  creationInfo <- rbind(creationInfo, paste("SSP data:", SSPdataZipFileName))
   addWorksheet(wbGeneral, sheetName="creation_Info")
-  writeData(wbGeneral, creationInfo, sheet="creation_Info", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+  writeData(wbGeneral, creationInfo, sheet="creation_Info", startRow=1, startCol=1, 
+            rowNames = FALSE, colNames = FALSE)
+  
+  #Set up a dataframe to collect common worksheet names and descriptions. 
+  wbInfoGeneral <- data.frame(sheet_Name=character(),sheet_Desc=character(), stringsAsFactors = FALSE)
+  
+  wbInfoGeneral[1,] <- c("Sheet names", "Description of sheet contents")
   wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("creation_Info", "Information on creator, date, model version, etc.")
   
   #create a worksheet with info on the regions
   addWorksheet(wbGeneral, sheetName="metadataRegions")
-  wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c(f.hyperlink("metadataRegions","metadata on regions."), "Region metadata")
+  wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("metadataRegions", "Region metadata")
   writeData(wbGeneral, IMPACTregions, sheet="metadataRegions", startRow=1, startCol=1, rowNames = FALSE)
   addStyle(wbGeneral, sheet="metadataRegions", 
            style=textStyle, 
            rows = 1:nrow(IMPACTregions), 
            cols = 1:ncol(IMPACTregions), gridExpand = TRUE)
-  #setColWidths(wb, sheet="metadataRegions", cols = 1:ncol(IMPACTregions), widths="auto")
+  
+  #create a worksheet with info on the nutrient sources
+  req.metadata <- read.xlsx(EARFileName, sheet = 1, colNames = FALSE)
+  addWorksheet(wbGeneral, sheetName="MetaDataNutrnts")
+  writeData(wbGeneral, req.metadata, sheet="MetaDataNutrnts", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+  wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("MetaDataNutrnts", "Information about the requirements sources")
+  
   
   #create a worksheet with info on the commodities and nutrients
-  addWorksheet(wbGeneral,sheetName="metadataFoodCommods")
+  addWorksheet(wbGeneral,sheetName="IMPACTCommdlist")
   #commodityNames <- cbind(nutrients[c("Name","IMPACT_code")])
-  writeData(wbGeneral, nutrients, sheet="metadataFoodCommods", startRow=1, startCol=1)
-  #setColWidths(wb, sheet="metadataCommodities", cols = 1:3, widths="auto")
-  wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c(f.hyperlink("metadataFoodCommods","metadata on commodities and nutrients"), "Metadata on commodities and their nutrient makeup.")
+  writeData(wbGeneral, nutrients, sheet="IMPACTCommdlist", startRow=1, startCol=1)
+  addStyle(wbGeneral, sheet="IMPACTCommdlist", style=numStyle, rows = 1:nrow(nutrients), 
+           cols=2:ncol(eval(parse(text = reqList[i]))), gridExpand = TRUE)
   
-  #create a worksheet with info on the nutrients
-  addWorksheet(wbGeneral, sheetName="metadataNutrients")
-  writeData(wbGeneral, nutrientNames_Units, sheet="metadataNutrients", startRow=1, startCol=1, rowNames = FALSE,colNames = FALSE)
-  wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("=HYPERLINK(#metadataNutrients!A1,\"metadataNutrients\")", 
-                                               paste("Metadata on nutrient names and units, from the file ", nutrientFileName,sep=""))
+  wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("IMPACTCommdList", "IMPACT commodities and their nutrient content")
   
-  addWorksheet(wbGeneral, sheetName="metadataEARs")
-  wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("=HYPERLINK(#metadataEARs!A1,\"metadataEARs\")", 
-                                               paste("Metadata on EARs; units are the same as the nutrients metadata. column codes: SSP - classification according to SSP groups, M - Male, F- Female, X - children of both genders, P - pregnant, L - lactating"))
-  
-  writeData(wbGeneral, EARs, sheet="metadataEARs", startRow=1, startCol=1, rowNames = FALSE)
-  addStyle(wbGeneral, sheet="metadataEARs", style=numStyle, rows = 2:nrow(EARs)+1, cols=2:ncol(EARs), gridExpand = TRUE)
-  setColWidths(wbGeneral, sheet="metadataEARs", cols = 1:ncol(EARs), widths="auto")
   tmp <- list(wbGeneral, wbInfoGeneral)
   return(tmp)
 }
 
-#function to generate hyperlinks
 f.hyperlink <- function(sheetName,shtDesc) {
-  #here's what I need tmp to look like =HYPERLINK("#'metadataRegions'!A1","test")
+  #here's what I need a link to look like =HYPERLINK("#test!A1","testDescription")
   part1 <- '=HYPERLINK("#'
-  part2 <- paste("'",sheetName,"'",'!A1","',shtDesc,'")', sep = "")
-  tmp <- paste(part1, part2, sep="")
+  part2 <- paste(sheetName,"!A1",'",', sep="")
+  part3 <- paste('"',shtDesc,'")', sep="")
+  hlink <- paste(part1, part2, part3, sep="")
+  return(hlink)
 }
 
-f.finalizeWB <- function(wb,wbInf,nut.name) {
+f.finalizeWB <- function(wb,wbInf,file.name) {
   #add sheet with info about each of the worksheets
-  addWorksheet(wb, sheetName="sheetInfo")
-  writeData(wb, wbInf, sheet="sheetInfo", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
+  #the first column is written using writeFormula
+  addWorksheet(wb, sheetName="sheetInfo") 
+  for (i in 1:nrow(wbInf)) {
+    writeFormula(wb, "sheetInfo", x = f.hyperlink(wbInf[i,1],wbInf[i,1]), startCol = 1, startRow = i)
+  }
+  
+  writeData(wb, wbInf[,2], sheet="sheetInfo", startRow=1, startCol=2, rowNames = FALSE, colNames = FALSE)
   addStyle(wb, sheet="sheetInfo", style=textStyle, rows = 1:nrow(wbInf), cols=1:(ncol(wbInf)), gridExpand = TRUE)
   setColWidths(wb, sheet="sheetInfo", cols = 1:2, widths=20)
   
@@ -87,7 +85,7 @@ f.finalizeWB <- function(wb,wbInf,nut.name) {
   temp<- 2:length(names(wb))-1
   temp <- c(length(names(wb)),temp)
   worksheetOrder(wb) <- temp
-  xcelOutFileName <- paste("results/",nut.name,Sys.Date(),".xlsx",sep="")
+  xcelOutFileName <- paste("results/",file.name,Sys.Date(),".xlsx",sep="")
   
   saveWorkbook(wb, xcelOutFileName, overwrite = TRUE)
 }
@@ -132,7 +130,7 @@ f.write.nut.sum.sheet <- function(nutdf,wb) {
   addWorksheet(wb, sheetName=shtName)
   writeData(wb, nutdf.wide, sheet=shtName, startRow=1, startCol=1, rowNames = FALSE, colNames = TRUE)
   # the <<- structure below is supposed to allow one to access a global variable such as wbInfo
- return(c(shtName, paste("Average daily consumption of",
-                                     (unique(nutdf$nutrient)), "in scenario",
-                                     (unique(nutdf$scenario)), sep = " ")))
+  return(c(shtName, paste("Average daily consumption of",
+                          (unique(nutdf$nutrient)), "in scenario",
+                          (unique(nutdf$scenario)), sep = " ")))
 }  

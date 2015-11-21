@@ -51,12 +51,8 @@ source("nutrientDataLoading.R") # so the nutrients df is built
 
 allFoodGroups <- unique(foodGroupsInfo$food.group.code)
 # read in the CSEs ---------------------------------------------
+#moved to IMPACTdataLoading.R
 
-CSEs <- read.xlsx(CSEFileName, 
-                  sheet = 1,
-                  cols = 1:3,
-                  colNames = TRUE)
-colnames(CSEs) <- c("region","IMPACT_code","CSE")
 
 # Read in and set up the nutrient requirements data ---------------------------------------------
 
@@ -105,12 +101,12 @@ male.dri <- c("Chil4_8","M9_13","M14_18", "M19_30", "M19_30", "M31_50", "M31_50"
 male <- data.frame(male.ssp,male.dri, stringsAsFactors = FALSE)
 
 female.ssp <- c("SSPF5_9","SSPF10_14","SSPF15_19", "SSPF20_24", "SSPF25_29", "SSPF30_34", "SSPF35_39", 
-              "SSPF40_44", "SSPF45_49", "SSPF50_54", "SSPF55_59", "SSPF60_64", 
-              "SSPF65_69", "SSPF70_74", "SSPF75_79", "SSPF80_84", "SSPF85_89", 
-              "SSPF90_94", "SSPF95_99", "SSPF100Plus")
+                "SSPF40_44", "SSPF45_49", "SSPF50_54", "SSPF55_59", "SSPF60_64", 
+                "SSPF65_69", "SSPF70_74", "SSPF75_79", "SSPF80_84", "SSPF85_89", 
+                "SSPF90_94", "SSPF95_99", "SSPF100Plus")
 female.dri <- c("Chil4_8","F9_13","F14_18", "F19_30", "F19_30", "F31_50", "F31_50", "F31_50", "F31_50", 
-              "F31_50", "F51_70", "F51_70", "F51_70", "F70Plus", "F70Plus", "F70Plus", 
-              "F70Plus", "F70Plus", "F70Plus", "F70Plus")
+                "F31_50", "F51_70", "F51_70", "F51_70", "F70Plus", "F70Plus", "F70Plus", 
+                "F70Plus", "F70Plus", "F70Plus", "F70Plus")
 female <- data.frame(female.ssp,female.dri, stringsAsFactors = FALSE)
 
 children <- c("Inf0_0.5","Inf0.5_1", "Chil1_3")
@@ -122,13 +118,13 @@ for (j in reqs) {
   for (i in 1:nrow(male)) {
     temp <- temp2[temp2$ageGenderCode == male[i,2],]
     temp[1,1] <- male[i,1]
-#    print(temp[1,1])
+    #    print(temp[1,1])
     temp2 <- rbind(temp2,temp)
   }
   for (i in 1:nrow(female)) {
     temp <- temp2[temp2$ageGenderCode == female[i,2],]
     temp[1,1] <- female[i,1]
-#    print(temp[1,1])
+    #    print(temp[1,1])
     temp2 <- rbind(temp2,temp)
   }
   #children calcs for nutrient needs
@@ -186,13 +182,13 @@ for (j in reqs) {
 }
 
 remove(
-       "temp","temp2","male","male.dri","male.ssp",
-       "children","chldrn.male","chldrn.male.SSP","female","chldrn.female.SSP", "preg.potent","preg",
-       "female.dri","female.ssp","lact","tmp",
-       "req.EAR.nutlist","colsToRemove","colsToConvert",
-       "req.RDA.macro.nutlist", "req.UL.minrls.nutlist","req.RDA.minrls.nutlist",
-       "req.RDA.vits.nutlist","req.UL.vits.nutlist",
-       "newDFname","nutColName", "nutlistname")
+  "temp","temp2","male","male.dri","male.ssp",
+  "children","chldrn.male","chldrn.male.SSP","female","chldrn.female.SSP", "preg.potent","preg",
+  "female.dri","female.ssp","lact","tmp",
+  "req.EAR.nutlist","colsToRemove","colsToConvert",
+  "req.RDA.macro.nutlist", "req.UL.minrls.nutlist","req.RDA.minrls.nutlist",
+  "req.RDA.vits.nutlist","req.UL.vits.nutlist",
+  "newDFname","nutColName", "nutlistname")
 
 #these have been replaced by their equivalent with SSP age categories
 remove(req.EAR, req.RDA.vits, req.RDA.minrls, req.RDA.macro, req.UL.vits, req.UL.minrls, req.AMDR)

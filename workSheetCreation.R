@@ -25,8 +25,8 @@ f.finalizeWB(wbNut,wbInfNut,short.name)
 
 #write out spreadsheet for nutrient consumption summary
 tmp <- f.createGeneralWorksheet()
-wbNutsum <- tmp[[1]]
-wbInfsum <- tmp[[2]]
+wbGeneral <- tmp[[1]]
+wbInfoGeneral <- tmp[[2]]
 tmp.out <- by(nutShareTot,nutShareTot[,c("nutrient","scenario")],f.write.nut.sum.sheet,wbNutsum)
 tmp <- as.data.frame(matrix(unlist(tmp.out), nrow=length(tmp.out), byrow=T))
 colnames(tmp) <- colnames(wbInfsum)

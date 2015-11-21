@@ -16,16 +16,6 @@
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 # Contributors to the work include Brendan Power (for coding assistance), and 
 # Joanne E. Arsenault, Malcom Reilly, Jessica Bogard, and Keith Lividini (for nutrition expertise)
-require(openxlsx)
-require(entropy)
-require(reshape2)
-require(plyr)
-require(dplyr)
-require(tidyr)
-require(data.table)
-require(splitstackshape)
-require(plotrix)
-setwd("~/Documents/workspace/nutrientModeling")
 
 source("setup.R") #single script where data file names are stored
 
@@ -70,7 +60,7 @@ nutrients[colsToConvert][is.na(nutrients[colsToConvert])] <- 100
 nutrients[,nutrients.food][is.na(nutrients[,nutrients.food])] <- 0
 
 # # change nutrient denominator unit from 100 gm to 1 kg; 
-# commented out to leave units what nutritionists are familiar with
+# commented out to leave units that nutritionists are familiar with
 # nutrients[,nutrients.food] <- nutrients[,nutrients.food] * 10
 
 # convert IMPACT consumption values to consumer nutrient intake ---
@@ -116,7 +106,8 @@ staples <- data.frame(food.group.code = food.groups,
                       stringsAsFactors = FALSE)
 
 nutrients <- merge(nutrients, staples, by = "food.group.code", all = TRUE)
+# move food group code column to end of columns
 nutrients <- nutrients[,c(2:length(nutrients),1)]
 
-nutrients.out <- iconv(nutrients, from = "UTF-8", to = "Windows-1252") #to deal with mu
-write.csv(nutrients.out,file = "results/nutrients_final.csv", fileEncoding = "Windows-1252")
+#nutrients.out <- iconv(nutrients, from = "UTF-8", to = "Windows-1252") #to deal with mu
+saveRDS(nutrients,file = "results/nutrients_final.rds")
