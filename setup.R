@@ -1,3 +1,18 @@
+# Intro -------------------------------------------------------------------
+#This script sets up a bunch of variables for use in all the other scripts. It should be run first.
+
+#Copyright (C) 2015 Gerald C. Nelson, except where noted
+
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+# 
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details at http://www.gnu.org/licenses/.
+
 require(openxlsx)
 require(entropy)
 require(reshape2)
@@ -25,6 +40,7 @@ IMPACTfileName <- "data/IMPACTData/Demand Results20150817.csv"
 IMPACTregionsFileName <- "data/IMPACTRegionsJan15tmp.csv" # this file removes Denmark plus (DNP) and South Sudan (SSD) as well as removes Greenland and South Sudan
 IMPACTregions <- read.csv(IMPACTregionsFileName, stringsAsFactors = FALSE)
 ctyNames  <- IMPACTregions$CTY
+fishInfoIMPACT <- "data/Fish Elasticities and Quantities IMPACT.xlsx"
 
 # Other info --------
 userName <- "Gerald Nelson"
