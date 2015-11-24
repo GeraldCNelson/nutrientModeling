@@ -44,12 +44,12 @@ if (!file.exists("data/SSPclean.rds")){
 #now add the new IFPRI regions
 source(file = "RegionsAlignment.R")
 # SSP regions
-regions <- unique(SSP$region) #there are 194 regions
-
+regions.SSP <- as.data.frame(sort(unique(SSP$region)),stringsAsFactors = FALSE) #there are 194 regions
+colnames(regions.SSP) <- "CTY"
 for (j in 1:length(plusRegions)) { # loop through all the plus regions in IMPACT
   ctyList <- eval(parse(text = plusRegions[j]))
   for (i in 1:length(ctyList)) { #look at all the country names in a plus region to make sure they are a IIASA country
-    if(!(ctyList[i] %in% regions)) { #identify countries not in IIASA list
+    if(!(ctyList[i] %in% regions.SSP)) { #identify countries not in IIASA list
       print(paste(ctyList[i],"from", plusRegions[j], "is not in IIASA countries"))
     }
     else {
