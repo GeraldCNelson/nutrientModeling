@@ -14,6 +14,8 @@
 # GNU General Public License for more details at http://www.gnu.org/licenses/.
 
 source("setup.R")
+
+# fish supply in 1000 metric tons
 fishS <- read.xlsx(fishInfoIMPACT, 
  sheet = "QS_FishSys",
  cols = 1:6, startRow = 3,
@@ -30,7 +32,7 @@ IMPACT_code_lookup <- c("c_shrimp","c_Crust","c_Mllsc","c_Salmon","c_FrshD","c_T
 
 fishLookup <- data.frame(fishqNameOld,fishNameIMPACT)
 
-# fish demand in 2000 metric tons
+# fish demand in 1000 metric tons
 fishD <- read.xlsx(fishInfoIMPACT, 
                    sheet = "DemandStkChg",
                    cols = 1:11, startRow = 3,
@@ -38,9 +40,26 @@ fishD <- read.xlsx(fishInfoIMPACT,
 colnames(fishD) <- c("IMPACT_code","region", "net_trade","exports","imports","tot_demand","food_demand",
                      "feed_demand", "other_demand", "stock_change","crush_demand")
 
+fishD[is.na(fishD)] <- 0
+fishD <- fishD[order( fishD$region), ]
 fishIncElast <- read.xlsx(fishInfoIMPACT, 
                                    sheet = "IncDmdElas",
                                    cols = 1:11, startRow = 1,
                                    colNames = TRUE)
 
+# need to create fish data for the new regions in the latest version of IMPACT
 
+ctyNames.old <- sort(unique(fishD$region))
+
+regionsLookup <- read.xlsx(fishInfoIMPACT, 
+                          sheet = "IMPACT 115 Regions",
+                          cols = 4:11, rows = 3:120,
+                          colNames = FALSE)
+
+temp <- as.data.frame(cSplit(regionsLookup, 'X1', sep=".", type.convert=FALSE))
+temp$X1_2 <- gsub("\\(","",temp$X1_2)
+temp$X1_2 <- gsub("\\)","",temp$X1_2)
+
+temp2 <- merge(x = temp,y = fishD, by.x = "X1_1", by.y = "region", all = TRUE)
+df.ctyNames <- as.data.frame(ctyNames, stringsAsFactors = FALSE)
+temp3 <- merge(x = temp2, y = df.ctyNames, by.x = "X1_2", by.y = "ctyNames", all = TRUE)

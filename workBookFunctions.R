@@ -1,4 +1,19 @@
-#create some common styles
+# Intro -------------------------------------------------------------------
+#This script contains functions to generate spreadsheets of the nutrition requirements results
+
+#Copyright (C) 2015 Gerald C. Nelson, except where noted
+
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+# 
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details at http://www.gnu.org/licenses/.
+
+source("setup.R")#create some common styles
 numStyle <- createStyle(numFmt = "0.00")
 numStyle3 <- createStyle(numFmt = "0.000")
 shareStyle <- createStyle(numFmt = "0.0%")
