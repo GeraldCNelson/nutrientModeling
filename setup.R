@@ -13,6 +13,7 @@
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 
+require(roxygen2)
 require(openxlsx)
 require(entropy)
 require(reshape2)
@@ -23,6 +24,7 @@ require(data.table)
 require(splitstackshape)
 require(plotrix)
 require(ggplot2)
+library("devtools")
 setwd("~/Documents/workspace/nutrientModeling")
 
 # file names ---------------------
@@ -31,16 +33,18 @@ EARFileName <- "data/DRI_IOM_V2.xlsx"
 #Note: the price a consumer pays is Pc * (1-CSE)
 CSEFileName <- "data/IMPACTData/CSEs20150824.xlsx" 
 nutrientFileName <- "data/USDA GFS IMPACT V9.xlsx"
+
 commodityFoodGroupLookupFileName <- "data/food commodity to food group table V1.xlsx"
 IMPACTregionsFileName <- "data/IMPACTRegionsJan2015.xlsx"
 SSPdataZipFileLocation <- c("data/SSPData/SspDb_country_data_2013-06-12.csv.zip")
 SSPdataZipFileName <- c("SspDb_country_data_2013-06-12.csv") #the name of the file inside the zip
 IMPACTfileName <- "data/IMPACTData/Demand Results20150817.csv"
-#IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.csv" # this file includes Denmark plus (DNP) and Sudan plus (SDP) and removes Greenland and South Sudan
-IMPACTregionsFileName <- "data/IMPACTRegionsJan15tmp.csv" # this file removes Denmark plus (DNP) and South Sudan (SSD) as well as removes Greenland and South Sudan
-IMPACTregions <- read.csv(IMPACTregionsFileName, stringsAsFactors = FALSE)
-ctyNames  <- IMPACTregions$CTY
+IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.csv" # this file includes Denmark plus (DNP) and Sudan plus (SDP) and removes Greenland and South Sudan
+#IMPACTregionsFileName <- "data/IMPACTRegionsJan15tmp.csv" # this file removes Denmark plus (DNP) and South Sudan (SSD) as well as removes Greenland and South Sudan
+regions.IMPACT3 <- read.csv(IMPACTregionsFileName, stringsAsFactors = FALSE); colnames(regions.IMPACT3) <- c("region_code","region_name")
+ctyNames  <- regions.IMPACT3$region_code
 fishInfoIMPACT <- "data/Fish Elasticities and Quantities IMPACT.xlsx"
+ISOctyCodes <- "data/ISOCountrycodes.xlsx"
 
 # Other info --------
 userName <- "Gerald Nelson"
@@ -53,4 +57,4 @@ IMPACTfoodCommodList <- sort(c("cbeef","cpork","clamb","cpoul","ceggs","cmilk","
 
 #list of years to keep
 keepYearList <- c("X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050")
-source("workBookFunctions.R")
+#source("workBookFunctions.R")

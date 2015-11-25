@@ -1,6 +1,18 @@
 # Intro -------------------------------------------------------------------
 #This script contains functions to generate regional aggregations from country data,
 #This uses 3 digit country codes are based on the ISO 3166 standard,See http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3
+#The output is three sets of country codes
+#regions.ISO - all the 3 digit codes that the ISO as defined, as of Nov 2015. The file name variable is created in the setup.R script
+#regions.IMPACT3 - all the ISO codes used by IMPACT3, including those in regional aggregates
+#regions.IMPACT3.plus - all the ISO codes used by IMPACT3 that are in regional aggregates, along with the name of the regional aggregate
+#regions.IMPACT115 - all the ISO codes used in the 115 region version of IMPACT, including those in regional aggregates
+#regions.IMPACT115.plus - all the ISO codes used in the 115 region version of IMPACT3 that are in regional aggregates, along with the name of the regional aggregate
+#naming conventions
+#country_code - a 3 letter ISO code
+#country_name - a descriptive name for the country
+#region_code - a 3 letter code that describes a group of countries that is made up of one or more country codes
+#region_members - one or more country codes that make up the region
+#region_name - a descriptive name for the region. Identical to the country name for regions that have only one country
 
 #Copyright (C) 2015 Gerald C,Nelson, except where noted
 
@@ -13,144 +25,173 @@
 #     but WITHOUT ANY WARRANTY; without even the implied warranty of
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE, See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
+source("setup.R")
 
 # read in all ISO country codes
 regions.ISO <- read.xlsx(ISOctyCodes) 
+colnames(regions.ISO) <- c("country_code","country_name")
 
-# First do IMPACT3 regions, called plusREgions------
+# Create regions.IMPACT3.plus------
 #For small countries and other political units, IMPACT has created regions that are essentially 
 # the largest political unit and one or more smaller political units
-#plusRegions are all the regions larger than a single political unit and what political units are included
-plusRegions <- data.frame(region = character(),
-                          members = character(),
-                          region_desc = character(), 
+#regions.IMPACT3.plus is all the regions larger than a single political unit and what political units are included
+regions.IMPACT3.plus <- data.frame(region_code = character(),
+                          region_members = character(),
                           stringsAsFactors=FALSE)
-ctyNme <- "BLT"
+CTY <- "BLT"
 lst <- c("EST,LTU,LVA") 
-txt <- c("BLT Baltic States is Estonia EST, Lithuania LTU, Latvia LVA")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("BLT Baltic States is Estonia EST, Lithuania LTU, Latvia LVA")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "BLX"
+CTY <- "BLX"
 lst <- c("BEL,LUX")
-txt <- c("BLX Belgium-Luxembourg is Belgium BEL, Luxembourg LUX")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("BLX Belgium-Luxembourg is Belgium BEL, Luxembourg LUX")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "CHM" 
+CTY <- "CHM" 
 lst <- c("CHN,HKG,MAC,TWN") 
-txt <- c("CHM China plus is China CHN, Hong Kong HKG, Macao MAC, Taiwan TWN")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("CHM China plus is China CHN, Hong Kong HKG, Macao MAC, Taiwan TWN")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "CHP" 
+CTY <- "CHP" 
 lst <- c("CHE,LIE") 
-txt <- c("CHP Switzerland plus is Switzerland CHE Liechtenstein LIE")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("CHP Switzerland plus is Switzerland CHE Liechtenstein LIE")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "CRB" 
+CTY <- "CRB" 
 lst <- c("ABW,AIA,ANT,ATG,BES,BHS,BLM,BRB,CUW,CYM,DMA,GLP,GRD,KNA,LCA,MAF,MSR,MTQ,PRI,SXM,TCA,TTO,VCT,VGB,VIR") 
-txt <- c("CRB Other Caribbean is Aruba ABW, Anguilla AIA, Netherlands Antilles (obsolete) ANT, Antigua ATG
- Bonaire, Sint Eustatius, and Saba BES, Bahamas BHS, St,Barthélemy BLM, Barbados BRB, Curacao CUW, Cayman Islands CYM
- Dominica DMA, Guadeloupe GLP, Grenada GRD, St,Kitts and Nevis KNA, St,Lucia LCA, Saint Martin MAF
- Montserrat MSR, Martinique MTQ, Puerto Rico PRI, Sint Maarten SXM, Turks and Caicos Islands TCA
-Trinidad and Tobago TTO, St,Vincent and Grenadines VCT, British Virgin Islands VGB, U.S,Virgin Islands VIR")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("CRB Other Caribbean is Aruba ABW, Anguilla AIA, Netherlands Antilles (obsolete) ANT, Antigua ATG
+# Bonaire, Sint Eustatius, and Saba BES, Bahamas BHS, St,Barthélemy BLM, Barbados BRB, Curacao CUW, Cayman Islands CYM
+# Dominica DMA, Guadeloupe GLP, Grenada GRD, St,Kitts and Nevis KNA, St,Lucia LCA, Saint Martin MAF
+# Montserrat MSR, Martinique MTQ, Puerto Rico PRI, Sint Maarten SXM, Turks and Caicos Islands TCA
+#Trinidad and Tobago TTO, St,Vincent and Grenadines VCT, British Virgin Islands VGB, U.S,Virgin Islands VIR")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <-  "DNP" 
+CTY <-  "DNP" 
 lst <- c("DNK,GRL") 
-txt <- c("DNP Denmark plus is DNK Denmark GRL Greenland")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("DNP Denmark plus is DNK Denmark GRL Greenland")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "FNP" 
+CTY <- "FNP" 
 lst <- c("ALA,FIN") 
-txt <- c("FNP Finland plus is Aland Islands ALA Finland FIN")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("FNP Finland plus is Aland Islands ALA Finland FIN")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "FRP" 
+CTY <- "FRP" 
 lst <- c("FRA,MCO") 
-txt <- c("FRP France plus is France FRA Monaco MCO")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("FRP France plus is France FRA Monaco MCO")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "GSA" 
+CTY <- "GSA" 
 lst <- c("GUF,GUY,SUR") 
-txt <- c("GSA Guyanas is South America French Guiana GUF Guyana GUY Suriname SUR")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("GSA Guyanas is South America French Guiana GUF Guyana GUY Suriname SUR")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "ITP" 
+CTY <- "ITP" 
 lst <- c("ITA,MLT,SMR,VAT") 
-txt <- c("ITP Italy plus is Italy ITA Malta MLT San Marino SMR Vatican City VAT")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("ITP Italy plus is Italy ITA Malta MLT San Marino SMR Vatican City VAT")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "MOR" 
+CTY <- "MOR" 
 lst <- c("MAR,ESH") 
-txt <- c("MOR Morocco plus is Morocco MAR Western Sahara ESH")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("MOR Morocco plus is Morocco MAR Western Sahara ESH")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "OAO" 
-lst <- c("BMU,BVT,CPV,FLK,FRO,SGS,SHN,SJM,SPM,STP,BIH")
-txt <- c("OAO Other is Atlantic Ocean Bermuda BMU Bouvet Island BVT Cape Verde CPV Falkland Islands FLK Faroe Islands FRO 
-South Georgia and South Sandwich Islands SGS Saint Helena, Ascension, and Tristan de Cunha SHN
-Svalbard and Jan Mayen SJM Saint Pierre and Miquelon SPM Sao Tome and Principe STP")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+CTY <- "OAO" 
+lst <- c("BMU,BVT,CPV,FLK,FRO,SGS,SHN,SJM,SPM,STP")
+# txt <- c("OAO Other is Atlantic Ocean Bermuda BMU Bouvet Island BVT Cape Verde CPV Falkland Islands FLK Faroe Islands FRO 
+# South Georgia and South Sandwich Islands SGS Saint Helena, Ascension, and Tristan de Cunha SHN
+# Svalbard and Jan Mayen SJM Saint Pierre and Miquelon SPM Sao Tome and Principe STP")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "OBN" 
+CTY <- "OBN" 
 lst <- c("BIH,MKD,MNE,SRB") 
-txt <- c("OBN Other is Balkans Bosnia-Herzegovina BIH Macedonia (FYR) MKD Montenegro MNE Serbia SRB")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("OBN Other is Balkans Bosnia-Herzegovina BIH Macedonia (FYR) MKD Montenegro MNE Serbia SRB")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "OIO" 
+CTY <- "OIO" 
 lst <- c("ATF,CCK,COM,CXR,HMD,IOT,MDV,MUS,MYT,REU,SYC")
-txt <- c("OIO Other is Indian Ocean Southern Territories ATF Keeling Islands CCK Comoros COM Christmas Island CXR
- Heard and McDonald Islands HMD British Indian Ocean Territory IOT Maldives MDV Mauritius MUS
- Mayotte MYT Réunion REU Seychelles SYC")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("OIO Other is Indian Ocean Southern Territories ATF Keeling Islands CCK Comoros COM Christmas Island CXR
+# Heard and McDonald Islands HMD British Indian Ocean Territory IOT Maldives MDV Mauritius MUS
+# Mayotte MYT Réunion REU Seychelles SYC")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "OPO" 
+CTY <- "OPO" 
 lst <- c("ASM,COK,FSM,GUM,KIR,MHL,MNP,NCL,NFK,NIU,NRU,PCN,PLW,PYF,TKL,TON,TUV,UMI,WLF,WSM")
-txt <- c("OPO Other is Pacific Ocean American Samoa ASM Cook Islands COK Micronesia FSM Guam GUM
- Kiribati KIR Marshall Islands MHL Northern Mariana Islands MNP New Caledonia NCL Norfolk Island NFK
- Niue NIU Nauru NRU Pitcairn PCN Palau PLW French Polynesia PYF Tokelau TKL Tonga TON Tuvalu TUV
- Minor Outlying Islands UMI Wallis and Futuna WLF Samoa WSM")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+# txt <- c("OPO Other is Pacific Ocean American Samoa ASM Cook Islands COK Micronesia FSM Guam GUM
+#  Kiribati KIR Marshall Islands MHL Northern Mariana Islands MNP New Caledonia NCL Norfolk Island NFK
+#  Niue NIU Nauru NRU Pitcairn PCN Palau PLW French Polynesia PYF Tokelau TKL Tonga TON Tuvalu TUV
+#  Minor Outlying Islands UMI Wallis and Futuna WLF Samoa WSM")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "OSA" 
+CTY <- "OSA" 
 lst <- c("BRN,SGP") 
-txt <- c("OSA Other is Southeast Asia Brunei BRN Singapore SGP")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("OSA Other is Southeast Asia Brunei BRN Singapore SGP")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "RAP" 
+CTY <- "RAP" 
 lst <- c("ARE,BHR,KWT,OMN,QAT") 
-txt <- c("RAP  Rest of Arab is Peninsula	United Arab Emirates	ARE
- Bahrain	BHR Kuwait	KWT Oman	OMN Qatar	QAT")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("RAP  Rest of Arab is Peninsula	United Arab Emirates	ARE
+# Bahrain	BHR Kuwait	KWT Oman	OMN Qatar	QAT")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "SDP" 
+CTY <- "SDP" 
 lst <- c("SSD,SDN") 
-txt <- c("SDP Sudan plus is SSD Sudan SDN South Sudan")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("SDP Sudan plus is SSD Sudan SDN South Sudan")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "SPP" 
+CTY <- "SPP" 
 lst <- c("AND,ESP,GIB") 
-txt <- c("SPP  Spain plus	is Andorra	AND Spain	ESP Gibraltar	GIB")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("SPP  Spain plus	is Andorra	AND Spain	ESP Gibraltar	GIB")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-ctyNme <- "UKP" 
+CTY <- "UKP" 
 lst <- c("GBR,GGY,IMN") 
-txt <- c("UKP  Great Britain plus	Great Britain	GBR Guernsey	GGY Isle of Man	IMN")
-plusRegions[nrow(plusRegions)+1,] <- c(ctyNme, lst, txt )
+#txt <- c("UKP  Great Britain plus	Great Britain	GBR Guernsey	GGY Isle of Man	IMN")
+regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
-# Second do IMPACT old regions (115 regions)
+#create regions.IMPACT3. 
+regions.IMPACT3 <- merge(regions.IMPACT3,regions.IMPACT3.plus, by = "region_code", all = TRUE)
+regions.IMPACT3$region_members[is.na(regions.IMPACT3$region_members)] <- as.character(regions.IMPACT3$region_code[is.na(regions.IMPACT3$region_members)])
+colnames(regions.IMPACT3) <- c("region_code","region_name","region_members")
+
+# Create regions.IMPACT115 and regions.IMPACT115.plus
 
 regions115Lookup <- read.xlsx(fishInfoIMPACT, 
                            sheet = "IMPACT 115 Regions",
-                           cols = 4, rows = 3:117,
+                           cols = 4, rows = 3:118,
                            colNames = TRUE)
 
 regions.IMPACT115 <- as.data.frame(cSplit(regions115Lookup, 'mappingCode', sep=".", type.convert=FALSE))
 regions.IMPACT115$mappingCode_2 <- gsub("\\(","",regions.IMPACT115$mappingCode_2)
 regions.IMPACT115$mappingCode_2 <- gsub("\\)","",regions.IMPACT115$mappingCode_2)
-colnames(IMPACT115Regions) <- c("region","members")
-regions.IMPACT115 <- paste0(regions.IMPACT115$members, sep=",", collapse="") 
+colnames(regions.IMPACT115) <- c("region_code","region_members")
+
+# Create regions.SSP
+# the data frame regions.SSP, created in SSPPopExtract.R, has a single column. Here we add the second one, which is a duplicate
+# of the first but with members as its column name. The RDS file is created in SSPPopExtract.R.
+# It only needs to be run when new data are made available.
+
+SSP <- readRDS(file="data/SSPclean.rds")
+# SSP regions
+regions.SSP <- as.data.frame(sort(unique(SSP$region)),stringsAsFactors = FALSE) #there are 194 regions
+
+regions.SSP[,2] <- regions.SSP[,1]
+colnames(regions.SSP) <-c("region_code","region_members")
+setdiff(regions.SSP$region_code,regions.ISO$country_code) #check to see that SSP has all the countries
+setdiff(regions.ISO$country_code,regions.SSP$region_code) #check to see that SSP has all the countries
+setdiff(regions.SSP$region_code,regions.IMPACT3$region_code)
+
+#get all the country codes used in IMPACT3
+temp <- paste0(regions.IMPACT3$region_members, sep=",", collapse="")
+temp<- substr(temp, 1, nchar(temp)-1)
 #convert to a real list
-temp <- sort(colnames(read.csv(text = regions.IMPACT115)))
+temp <- sort(colnames(read.csv(text = temp)))
+setdiff(temp, regions.SSP$region_code)  #check to see that IMPACT3 has all the countries
 
-regions.IMPACT3 <- ctyNames
-
+#get all the country codes used in IMPACT115
+temp <- paste0(regions.IMPACT115$region_members, sep=",", collapse="")
+temp<- substr(temp, 1, nchar(temp)-1)
+#convert to a real list
+temp <- sort(colnames(read.csv(text = temp)))
+setdiff(temp, regions.SSP$region_code)  #check to see that IMPACT115 has all the countries

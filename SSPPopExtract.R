@@ -45,7 +45,7 @@ if (!file.exists("data/SSPclean.rds")){
 source(file = "RegionsAlignment.R")
 # SSP regions
 regions.SSP <- as.data.frame(sort(unique(SSP$region)),stringsAsFactors = FALSE) #there are 194 regions
-colnames(regions.SSP) <- "CTY"
+colnames(regions.SSP) <- "region_name"
 for (j in 1:length(plusRegions)) { # loop through all the plus regions in IMPACT
   ctyList <- eval(parse(text = plusRegions[j]))
   for (i in 1:length(ctyList)) { #look at all the country names in a plus region to make sure they are a IIASA country
