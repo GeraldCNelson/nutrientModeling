@@ -6,7 +6,7 @@
 #regions.IMPACT3 - all the ISO codes used by IMPACT3, including those in regional aggregates
 #regions.IMPACT3.plus - all the ISO codes used by IMPACT3 that are in regional aggregates, along with the name of the regional aggregate
 #regions.IMPACT115 - all the ISO codes used in the 115 region version of IMPACT, including those in regional aggregates
-#regions.IMPACT115.plus - all the ISO codes used in the 115 region version of IMPACT3 that are in regional aggregates, along with the name of the regional aggregate
+#regions.IMPACT115.plus - all the ISO codes used in the 115 region version of IMPACT that are in regional aggregates, along with the name of the regional aggregate
 #naming conventions
 #country_code - a 3 letter ISO code
 #country_name - a descriptive name for the country
@@ -30,6 +30,9 @@ source("setup.R")
 # read in all ISO country codes
 regions.ISO <- read.xlsx(ISOctyCodes) 
 colnames(regions.ISO) <- c("country_code","country_name")
+#remove CXR (Christmas Island) and ATA (Antartica)
+removeList <- c("CXR", "ATA", "JEY")
+regions.ISO <- regions.ISO[!regions.ISO$country_code %in% removeList,]
 
 # Create regions.IMPACT3.plus------
 #For small countries and other political units, IMPACT has created regions that are essentially 
@@ -59,12 +62,13 @@ lst <- c("CHE,LIE")
 regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
 CTY <- "CRB" 
-lst <- c("ABW,AIA,ANT,ATG,BES,BHS,BLM,BRB,CUW,CYM,DMA,GLP,GRD,KNA,LCA,MAF,MSR,MTQ,PRI,SXM,TCA,TTO,VCT,VGB,VIR") 
+lst <- c("ABW,AIA,ATG,BES,BHS,BLM,BRB,CUW,CYM,DMA,GLP,GRD,KNA,LCA,MAF,MSR,MTQ,PRI,SXM,TCA,TTO,VCT,VGB,VIR") 
 #txt <- c("CRB Other Caribbean is Aruba ABW, Anguilla AIA, Netherlands Antilles (obsolete) ANT, Antigua ATG
 # Bonaire, Sint Eustatius, and Saba BES, Bahamas BHS, St,Barthélemy BLM, Barbados BRB, Curacao CUW, Cayman Islands CYM
 # Dominica DMA, Guadeloupe GLP, Grenada GRD, St,Kitts and Nevis KNA, St,Lucia LCA, Saint Martin MAF
 # Montserrat MSR, Martinique MTQ, Puerto Rico PRI, Sint Maarten SXM, Turks and Caicos Islands TCA
 #Trinidad and Tobago TTO, St,Vincent and Grenadines VCT, British Virgin Islands VGB, U.S,Virgin Islands VIR")
+#ANT dropped from this list
 regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
 CTY <-  "DNP" 
@@ -110,10 +114,11 @@ lst <- c("BIH,MKD,MNE,SRB")
 regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
 CTY <- "OIO" 
-lst <- c("ATF,CCK,COM,CXR,HMD,IOT,MDV,MUS,MYT,REU,SYC")
+lst <- c("ATF,CCK,COM,HMD,IOT,MDV,MUS,MYT,REU,SYC")
 #txt <- c("OIO Other is Indian Ocean Southern Territories ATF Keeling Islands CCK Comoros COM Christmas Island CXR
 # Heard and McDonald Islands HMD British Indian Ocean Territory IOT Maldives MDV Mauritius MUS
 # Mayotte MYT Réunion REU Seychelles SYC")
+#CXR deleted from this list
 regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
 CTY <- "OPO" 
@@ -131,8 +136,8 @@ regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
 CTY <- "RAP" 
 lst <- c("ARE,BHR,KWT,OMN,QAT") 
-#txt <- c("RAP  Rest of Arab is Peninsula	United Arab Emirates	ARE
-# Bahrain	BHR Kuwait	KWT Oman	OMN Qatar	QAT")
+#txt <- c("RAP  Rest of Arab is Peninsula United Arab Emirates ARE
+# Bahrain BHR Kuwait KWT Oman OMN Qatar QAT")
 regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
 CTY <- "SDP" 
@@ -142,18 +147,21 @@ regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
 CTY <- "SPP" 
 lst <- c("AND,ESP,GIB") 
-#txt <- c("SPP  Spain plus	is Andorra	AND Spain	ESP Gibraltar	GIB")
+#txt <- c("SPP  Spain plus is Andorra AND Spain ESP Gibraltar GIB")
 regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
 CTY <- "UKP" 
 lst <- c("GBR,GGY,IMN") 
-#txt <- c("UKP  Great Britain plus	Great Britain	GBR Guernsey	GGY Isle of Man	IMN")
+#txt <- c("UKP  Great Britain plus Great Britain GBR Guernsey GGY Isle of Man IMN")
 regions.IMPACT3.plus[nrow(regions.IMPACT3.plus)+1,] <- c(CTY, lst )
 
 #create regions.IMPACT3. 
 regions.IMPACT3 <- merge(regions.IMPACT3,regions.IMPACT3.plus, by = "region_code", all = TRUE)
 regions.IMPACT3$region_members[is.na(regions.IMPACT3$region_members)] <- as.character(regions.IMPACT3$region_code[is.na(regions.IMPACT3$region_members)])
 colnames(regions.IMPACT3) <- c("region_code","region_name","region_members")
+
+removeList <- c("CXR", "ATA", "JEY")
+regions.IMPACT3 <- regions.IMPACT3[!regions.IMPACT3$region_code %in% removeList,]
 
 # Create regions.IMPACT115 and regions.IMPACT115.plus
 
@@ -165,8 +173,19 @@ regions115Lookup <- read.xlsx(fishInfoIMPACT,
 regions.IMPACT115 <- as.data.frame(cSplit(regions115Lookup, 'mappingCode', sep=".", type.convert=FALSE))
 regions.IMPACT115$mappingCode_2 <- gsub("\\(","",regions.IMPACT115$mappingCode_2)
 regions.IMPACT115$mappingCode_2 <- gsub("\\)","",regions.IMPACT115$mappingCode_2)
-colnames(regions.IMPACT115) <- c("region_code","region_members")
+regions.IMPACT115[,3] <- regions.IMPACT115[,1]
+colnames(regions.IMPACT115) <- c("region_code","region_members","region_code_old")
+#update regions.IMPACT115 to replace IMPACT cty names with their ISO equivalent
+temp <- regions.IMPACT115[grep(",", regions.IMPACT115$region_members, invert=TRUE),]
+regions.IMPACT115.plus <- regions.IMPACT115[grep(",", regions.IMPACT115$region_members),]
+temp$region_code <- temp$region_members
+regions.IMPACT115 <- rbind(temp,regions.IMPACT115.plus)
 
+# this is necessary because region_members are just strings of country codes
+removeList <- c("CXR", "ATA", "JEY")
+for (i in removeList) {
+  regions.IMPACT115$region_members <- gsub(paste(i,",",sep=""),"",regions.IMPACT115$region_members)
+}
 # Create regions.SSP
 # the data frame regions.SSP, created in SSPPopExtract.R, has a single column. Here we add the second one, which is a duplicate
 # of the first but with members as its column name. The RDS file is created in SSPPopExtract.R.
@@ -183,15 +202,28 @@ setdiff(regions.ISO$country_code,regions.SSP$region_code) #check to see that SSP
 setdiff(regions.SSP$region_code,regions.IMPACT3$region_code)
 
 #get all the country codes used in IMPACT3
-temp <- paste0(regions.IMPACT3$region_members, sep=",", collapse="")
-temp<- substr(temp, 1, nchar(temp)-1)
+IMPACT3ctycodes <- paste0(regions.IMPACT3$region_members, sep=",", collapse="")
+IMPACT3ctycodes<- substr(IMPACT3ctycodes, 1, nchar(IMPACT3ctycodes)-1)
 #convert to a real list
-temp <- sort(colnames(read.csv(text = temp)))
-setdiff(temp, regions.SSP$region_code)  #check to see that IMPACT3 has all the countries
+IMPACT3ctycodes <- sort(colnames(read.csv(text = IMPACT3ctycodes)))
 
 #get all the country codes used in IMPACT115
-temp <- paste0(regions.IMPACT115$region_members, sep=",", collapse="")
-temp<- substr(temp, 1, nchar(temp)-1)
+IMPACT115ctycodes <- paste0(regions.IMPACT115$region_members, sep=",", collapse="")
+IMPACT115ctycodes<- substr(IMPACT115ctycodes, 1, nchar(IMPACT115ctycodes)-1)
 #convert to a real list
-temp <- sort(colnames(read.csv(text = temp)))
-setdiff(temp, regions.SSP$region_code)  #check to see that IMPACT115 has all the countries
+IMPACT115ctycodes <- sort(colnames(read.csv(text = IMPACT115ctycodes)))
+
+# get the differences in country codes
+# with the complete set of ISO codes to IMPACT3
+setdiff(IMPACT3ctycodes, regions.ISO$country_code)  
+setdiff(regions.ISO$country_code,IMPACT3ctycodes)  
+
+# with the complete set of ISO codes to SSP
+setdiff(regions.SSP$region_code, regions.ISO$country_code)  
+setdiff(regions.ISO$country_code,regions.SSP$region_code)  
+
+# with the complete set of ISO codes to IMPACT115
+setdiff(IMPACT115ctycodes, regions.ISO$country_code)  
+setdiff(regions.ISO$country_code,IMPACT115ctycodes)  
+
+
