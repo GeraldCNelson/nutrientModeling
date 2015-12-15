@@ -2,6 +2,14 @@
 #This script reads in the Shared Socioeconomic Profiles information, does some manipulations of the data,
 #and pulls out just the population data
 #In several places old inefficient code is commented out and replaced by cleaner code written by Brendan Power of CSIRO
+#Creates the following RDS files
+#data/SSPclean.rds cleaned up SSP file
+# req.EAR - results/req.EAR.percap.rds
+# req.RDA.vits - results/req.RDA.vits.percap.rds
+# req.RDA.minrls - results/req.RDA.minrls.percap.rds
+# req.RDA.macro - results/req.RDA.macro.percap.rds
+# req.UL.vits - results/req.UL.vits.percap.rds
+# req.UL.minrls - results/req.UL.minrls.percap.rds"
 
 #Copyright (C) 2015 Gerald C. Nelson, except where noted
 

@@ -1,6 +1,6 @@
 # Intro -------------------------------------------------------------------
 #This script reads in the Shared Socioeconomic Profiles information and the nutrient requirements data
-# It produces a data frame xxx
+# It produces data tables that have the various nutrient requirements weighted by SSP age and gender groups
 #In several places old inefficient code is commented out and replaced by cleaner code written by Brendan Power of CSIRO
 
 #Copyright (C) 2015 Gerald C. Nelson, except where noted
@@ -50,9 +50,7 @@ source("nutrientDataLoading.R") # so the nutrients df is built
 # vegetables <-c("vegetables")
 
 allFoodGroups <- unique(foodGroupsInfo$food.group.code)
-# read in the CSEs ---------------------------------------------
-#moved to IMPACTdataLoading.R
-
+# read in the CSEs - moved to IMPACTdataLoading.R
 
 # Read in and set up the nutrient requirements data ---------------------------------------------
 
@@ -83,7 +81,8 @@ req.UL.vits <- req.UL.vits[,c("ageGenderCode",common.UL.vits)]
 req.UL.minrls <- req.UL.minrls[,c("ageGenderCode",common.UL.minrls)]
 req.AMDR <- req.AMDR[,c("ageGenderCode",common.AMDR)]
 
-# naming convention, M - Male, F- Female, X - children of both genders, Preg - pregnant, Lact - lactating
+# naming conventions ----------
+# M - Male, F- Female, X - children of both genders, Preg - pregnant, Lact - lactating
 
 #assuming the population statistics have the number of children 5-9 years 
 #and the EAR is for 4-8 years… you could make a new population estimate for 4-8 years by taking 
@@ -142,7 +141,7 @@ for (j in reqs) {
   chldrn.female.SSP$ageGenderCode <- "SSPF0_4"
   temp2 <- rbind_all(list(temp2,chldrn.male.SSP,chldrn.female.SSP))
   
-  #these calculations are needed for the pregnant and lactating women results
+  # calculations needed for the pregnant and lactating women results ----
   #SSPF15_49 <-  (F14_18 + F19_30 + F31_50)/3
   #SSPLact <- (Lact14_18 + Lact19_30 + Lact31_50)/3
   #SSPPreg <- (Preg14_18 + Preg19_30 + Preg31_50)/3
