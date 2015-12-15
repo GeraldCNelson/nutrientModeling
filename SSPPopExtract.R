@@ -29,25 +29,42 @@ source("setup.R")
 source("EARfoodGroupCSEloading.R") # this script also runs nutrientDataLoading.R
 
 #list of years to keep; moved to setup.R
-#yearList <- c("X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050")
+#keepYearList <- c("X2010","X2015","X2020","X2025","X2030","X2035","X2040","X2045","X2050")
 
 # Read in and manipulate the SSP data -------------------------------------
 if (!file.exists("data/SSPclean.rds")){
   # - if a clean .Rdata file doesn't exist, read in csv file, once, do some manipulation and save as an .rdata file
   SSP <- read.csv(unz(description = SSPdataZipFileLocation, file=SSPdataZipFileName), 
                   stringsAsFactors=FALSE)
-  #Years 1950 to 1995 and 2050 to 2100 because they are all NAs. In addition, NCAR has NA for 2000 and 2005.
-  #Remove years X2000 and X2005  because they are NA for pop values
-  SSP  <- SSP[,!sapply(SSP,function(x) all(is.na(x)))]
+  SSP <- SSP[c("model", "scenario", "region","variable",keepYearList)]
   #make all names lower case
-  names(SSP)[1:5] <- tolower(names(SSP)[1:5])
+  names(SSP) <- c("model", "scenario", "region_name","variable",keepYearList)
   #drop the data after 2050
-  SSP <- SSP[c("model", "scenario", "region","variable",yearList)]
   #save cleaned up file as an .rdata file
   saveRDS(SSP, file="data/SSPclean.rds")
 } else {
   SSP <- readRDS(file="data/SSPclean.rds")
 }
+
+# testing ways to aggregate SSP data to IMPACT 3 regions
+dt.SSP <- as.data.table(SSP)
+
+dt.regions.IMPACT3 = as.data.table(regions.IMPACT3)
+newdt <-merge(dt.SSP, dt.regions.IMPACT3, by.y="region_name", all=TRUE)
+
+
+
+
+
+setkey(dt.SSP, "variable","region")
+ctyList <- unlist(regions.IMPACT3["1511",3]) #using the rowname for OIO; this is a list
+dt.SSP[,region_name := 
+df2 <- dt.SSP[,region.new := lapply(.SD, sum), by=(region = ctyList), 
+              .SDcols=c("X2010","X2015","X2020","X2025", "X2030", "X2035","X2040","X2045","X2050")]
+df2 <- dt.SSP[,region.new := lapply(.SD, sum), 
+              .SDcols=c("X2010","X2015","X2020","X2025", "X2030", "X2035","X2040","X2045","X2050")]
+
+# end of testing
 
 #now add the new IFPRI regions
 source(file = "RegionsAlignment.R")

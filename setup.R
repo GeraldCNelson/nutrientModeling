@@ -24,8 +24,13 @@ require(data.table)
 require(splitstackshape)
 require(plotrix)
 require(ggplot2)
+require(stringi)
 library("devtools")
 setwd("~/Documents/workspace/nutrientModeling")
+
+# get rid of strings as factors, but reset on exit ----
+old <- options(stringsAsFactors = FALSE)
+on.exit(options(old), add = TRUE)
 
 # file names ---------------------
 EARFileName <- "data/DRI_IOM_V2.xlsx"
@@ -41,8 +46,9 @@ SSPdataZipFileName <- c("SspDb_country_data_2013-06-12.csv") #the name of the fi
 IMPACTfileName <- "data/IMPACTData/Demand Results20150817.csv"
 IMPACTregionsFileName <- "data/IMPACTRegionsMay2015.csv" # this file includes Denmark plus (DNP) and Sudan plus (SDP) and removes Greenland and South Sudan
 #IMPACTregionsFileName <- "data/IMPACTRegionsJan15tmp.csv" # this file removes Denmark plus (DNP) and South Sudan (SSD) as well as removes Greenland and South Sudan
-regions.IMPACT3 <- read.csv(IMPACTregionsFileName, stringsAsFactors = FALSE); colnames(regions.IMPACT3) <- c("region_code","region_name")
-ctyNames  <- regions.IMPACT3$region_code
+IMPACT3Regions <- read.csv(IMPACTregionsFileName, stringsAsFactors = FALSE)
+colnames(IMPACT3Regions) <- c("region_code","region_name")
+ctyNames  <- IMPACT3Regions$region_code
 fishInfoIMPACT <- "data/Fish Elasticities and Quantities IMPACT.xlsx"
 ISOctyCodes <- "data/ISOCountrycodes.xlsx"
 
