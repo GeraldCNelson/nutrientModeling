@@ -36,21 +36,18 @@ if (!file.exists("data/SSPclean.rds")){
   # - if a clean .Rdata file doesn't exist, read in csv file, once, do some manipulation and save as an .rdata file
   SSP <- read.csv(unz(description = SSPdataZipFileLocation, file=SSPdataZipFileName), 
                   stringsAsFactors=FALSE)
-  SSP <- SSP[c("model", "scenario", "region","variable",keepYearList)]
-  #make all names lower case
+  SSP <- SSP[c("MODEL", "SCENARIO", "REGION", "VARIABLE", keepYearList)]
+  #make all names lower case and change region to region_name
   names(SSP) <- c("model", "scenario", "region_name","variable",keepYearList)
-  #drop the data after 2050
-  #save cleaned up file as an .rdata file
+   #save cleaned up file as an .rdata file
   saveRDS(SSP, file="data/SSPclean.rds")
 } else {
   SSP <- readRDS(file="data/SSPclean.rds")
 }
 
 # testing ways to aggregate SSP data to IMPACT 3 regions
-dt.SSP <- as.data.table(SSP)
 
-dt.regions.IMPACT3 = as.data.table(regions.IMPACT3)
-newdt <-merge(dt.SSP, dt.regions.IMPACT3, by.y="region_name", all=TRUE)
+temp <-merge(SSP, regions.IMPACT3, by="region_name", all=TRUE)
 
 
 
