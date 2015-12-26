@@ -20,17 +20,12 @@
 
 # Source of requirements is http://www.nal.usda.gov/fnic/DRI/DRI_Tables/recommended_intakes_individuals.pdf ---
 
-require(openxlsx)
-require(entropy)
-require(reshape2)
-require(plyr)
-require(dplyr)
-require(tidyr)
-require(data.table)
-require(splitstackshape)
-require(plotrix)
+setwd("~/Documents/workspace/nutrientModeling")
+source(file = "setup.R")
 
-source("nutrientDataLoading.R") # so the nutrients df is built
+#source("nutrientDataLoading.R") # only run this when there is a new nutrients spreadsheet; otherwise the next
+# line is fine
+load(file = "data/nutrients_final.RData")
 # file name definitions are in setup.R
 # Read in and clean up files ----------------------------------------------
 
@@ -183,11 +178,11 @@ for (j in reqs) {
 remove(
   "temp","temp2","male","male.dri","male.ssp",
   "children","chldrn.male","chldrn.male.SSP","female","chldrn.female.SSP", "preg.potent","preg",
-  "female.dri","female.ssp","lact","tmp",
-  "req.EAR.nutlist","colsToRemove","colsToConvert",
+  "female.dri","female.ssp","lact",
+  "req.EAR.nutlist",
   "req.RDA.macro.nutlist", "req.UL.minrls.nutlist","req.RDA.minrls.nutlist",
   "req.RDA.vits.nutlist","req.UL.vits.nutlist",
-  "newDFname","nutColName", "nutlistname")
+  "newDFname", "nutlistname")
 
 #these have been replaced by their equivalent with SSP age categories
 remove(req.EAR, req.RDA.vits, req.RDA.minrls, req.RDA.macro, req.UL.vits, req.UL.minrls, req.AMDR)

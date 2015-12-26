@@ -17,6 +17,7 @@
 # Contributors to the work include Brendan Power (for coding assistance), and 
 # Joanne E. Arsenault, Malcom Reilly, Jessica Bogard, and Keith Lividini (for nutrition expertise)
 
+setwd("~/Documents/workspace/nutrientModeling")
 source("setup.R") #single script where data file names are stored
 
 # Data loading code for nutrientCalcs -------------------------------------
@@ -110,4 +111,4 @@ nutrients <- merge(nutrients, staples, by = "food.group.code", all = TRUE)
 nutrients <- nutrients[,c(2:length(nutrients),1)]
 
 #nutrients.out <- iconv(nutrients, from = "UTF-8", to = "Windows-1252") #to deal with mu
-saveRDS(nutrients,file = "results/nutrients_final.rds")
+save("nutrients","foodGroupsInfo",file = "data/nutrients_final.RData")

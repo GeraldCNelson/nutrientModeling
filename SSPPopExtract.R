@@ -23,7 +23,11 @@
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 
+setwd("~/Documents/workspace/nutrientModeling")
 source("setup.R")
+
+#read in the data on how ISO 3 digit countries are grouped into regions. Created in RegionsAlignment.R
+load(file = "data/regions.RData")
 
 # generate the nutrient requirements data frames
 source("EARfoodGroupCSEloading.R") # this script also runs nutrientDataLoading.R
@@ -37,79 +41,57 @@ if (!file.exists("data/SSPclean.rds")){
   SSP <- read.csv(unz(description = SSPdataZipFileLocation, file=SSPdataZipFileName), 
                   stringsAsFactors=FALSE)
   SSP <- SSP[c("MODEL", "SCENARIO", "REGION", "VARIABLE", keepYearList)]
-  #make all names lower case and change region to region_name
-  names(SSP) <- c("model", "scenario", "region_name","variable",keepYearList)
+  #make all names lower case and change region to region_code
+  names(SSP) <- c("model", "scenario", "country_code","variable",keepYearList)
    #save cleaned up file as an .rdata file
   saveRDS(SSP, file="data/SSPclean.rds")
 } else {
   SSP <- readRDS(file="data/SSPclean.rds")
 }
 
-# testing ways to aggregate SSP data to IMPACT 3 regions
-
-temp <-merge(SSP, regions.IMPACT3, by="region_name", all=TRUE)
-
-
-
-
-
-setkey(dt.SSP, "variable","region")
-ctyList <- unlist(regions.IMPACT3["1511",3]) #using the rowname for OIO; this is a list
-dt.SSP[,region_name := 
-df2 <- dt.SSP[,region.new := lapply(.SD, sum), by=(region = ctyList), 
-              .SDcols=c("X2010","X2015","X2020","X2025", "X2030", "X2035","X2040","X2045","X2050")]
-df2 <- dt.SSP[,region.new := lapply(.SD, sum), 
-              .SDcols=c("X2010","X2015","X2020","X2025", "X2030", "X2035","X2040","X2045","X2050")]
-
-# end of testing
-
-#now add the new IFPRI regions
-source(file = "RegionsAlignment.R")
-# SSP regions
-regions.SSP <- as.data.frame(sort(unique(SSP$region)),stringsAsFactors = FALSE) #there are 194 regions
-colnames(regions.SSP) <- "region_name"
-for (j in 1:length(plusRegions)) { # loop through all the plus regions in IMPACT
-  ctyList <- eval(parse(text = plusRegions[j]))
-  for (i in 1:length(ctyList)) { #look at all the country names in a plus region to make sure they are a IIASA country
-    if(!(ctyList[i] %in% regions.SSP)) { #identify countries not in IIASA list
-      print(paste(ctyList[i],"from", plusRegions[j], "is not in IIASA countries"))
-    }
-    else {
-      ctyListNew <- c(ctyListNew,ctyList[i])
-    }
-  }
-  print(paste(ctyListNew, " is in ctyListNew for", plusRegions[j]))
-  #construct column names by adding the df name to the front of the cty name.
-  ctyList <- gsub("^","pop.IIASA.wide$",ctyListNew)
-  
-  #convert the list into an expression that sums across the cty columns that are in the IIASA data, 
-  # and that make up the IMPACT region
-  pop.IIASA.wide$tmp <- eval(parse(text = paste(ctyList, sep = "", collapse=" + ")))
-  income.IIASA.wide$tmp <- eval(parse(text = paste(ctyList, sep = "", collapse=" + ")))
-  #Give the tmp column its correct name
-  names(pop.IIASA.wide)[names(pop.IIASA.wide)=="tmp"] <- plusRegions[j]
-  names(income.IIASA.wide)[names(income.IIASA.wide)=="tmp"] <- plusRegions[j]
-  #Now remove the countries that make up the IMPACT plus region
-  #ctyListNew.as.c <- c(paste(ctyListNew, sep = "\", collapse=" , "
-  pop.IIASA.wide <- pop.IIASA.wide[,!(names(pop.IIASA.wide) %in% ctyListNew)]
-  income.IIASA.wide <- income.IIASA.wide[,!(names(income.IIASA.wide) %in% ctyListNew)]
-  
-}
+# # SSP regions
+# for (j in 1:length(plusRegions)) { # loop through all the plus regions in IMPACT
+#   ctyList <- eval(parse(text = plusRegions[j]))
+#   for (i in 1:length(ctyList)) { #look at all the country names in a plus region to make sure they are a IIASA country
+#     if(!(ctyList[i] %in% regions.SSP)) { #identify countries not in IIASA list
+#       print(paste(ctyList[i],"from", plusRegions[j], "is not in IIASA countries"))
+#     }
+#     else {
+#       ctyListNew <- c(ctyListNew,ctyList[i])
+#     }
+#   }
+#   print(paste(ctyListNew, " is in ctyListNew for", plusRegions[j]))
+#   #construct column names by adding the df name to the front of the cty name.
+#   ctyList <- gsub("^","pop.IIASA.wide$",ctyListNew)
+#   
+#   #convert the list into an expression that sums across the cty columns that are in the IIASA data, 
+#   # and that make up the IMPACT region
+#   pop.IIASA.wide$tmp <- eval(parse(text = paste(ctyList, sep = "", collapse=" + ")))
+#   income.IIASA.wide$tmp <- eval(parse(text = paste(ctyList, sep = "", collapse=" + ")))
+#   #Give the tmp column its correct name
+#   names(pop.IIASA.wide)[names(pop.IIASA.wide)=="tmp"] <- plusRegions[j]
+#   names(income.IIASA.wide)[names(income.IIASA.wide)=="tmp"] <- plusRegions[j]
+#   #Now remove the countries that make up the IMPACT plus region
+#   #ctyListNew.as.c <- c(paste(ctyListNew, sep = "\", collapse=" , "
+#   pop.IIASA.wide <- pop.IIASA.wide[,!(names(pop.IIASA.wide) %in% ctyListNew)]
+#   income.IIASA.wide <- income.IIASA.wide[,!(names(income.IIASA.wide) %in% ctyListNew)]
+#   
+# }
 # Extract lists of the scenarios, regions, and data variables ------------------------------------
 
-vNames <- unique(SSP$variable)
-scenarios <- unique(SSP$scenario) #There are 21 scenarios; 4 each for SSP1, 2, 3, and 5 and 5 for SSP 4.
-#This is the list of SSP3 scenarios
-#"SSP3_v9_130424" is from PIK and just for the US
-#"SSP3_v9_130325" is from OECD and is just GDP and population
-#"SSP3_v9_130219" is from IIASA and is just population and GDP
-#"SSP3_v9_130115" combine info from IIASA on population broken down by age, gender, and education and
+vNames <- unique(dt.SSP.regions$variable)
+scenarios <- unique(dt.SSP.regions$scenario) #There are 21 scenarios; 4 each for dt.SSP.regions1, 2, 3, and 5 and 5 for dt.SSP.regions 4.
+#This is the list of dt.SSP.regions3 scenarios
+#"SSP_v9_130424" is from PIK and just for the US
+#"SSP_v9_130325" is from OECD and is just GDP and population
+#"SSP_v9_130219" is from IIASA and is just population and GDP
+#"SSP_v9_130115" combine info from IIASA on population broken down by age, gender, and education and
 #   NCAR on population broken down by rural and urban. The IIASA data are from 2010 to 2100
 
-#work with only one SSP3 scenario for now, from IIASA for the age and gender breakdown and for the years 2010 to 2050
-scenario3 <- "SSP3_v9_130115"
-model <- "IIASA-WiC POP"
-ssp3 <- SSP[SSP$scenario == scenario3 & SSP$model == model,]
+#work with only one dt.SSP.regions3 scenario for now, from IIASA for the age and gender breakdown and for the years 2010 to 2050
+scen <- "SSP3_v9_130115"
+mdl <- "IIASA-WiC POP"
+dt.SSP.regions3 <- dt.SSP.regions[scenario == scen & model == mdl,]
 
 # Create population-only data set by removing rows with education breakdown and GDP -----
 popList <- "Population"
@@ -121,71 +103,71 @@ edList <- c("No Education", "Primary Education", "Secondary Education", "Tertiar
 genderList <-c("Male","Female")
 
 #keep full population count around for bug checking later
-ssp3.pop.tot.IIASA <- ssp3[ssp3$variable == "Population",c("region",yearList)]
-ssp3.pop.tot.IIASA <- ssp3.pop.tot.IIASA[order(ssp3.pop.tot.IIASA$region),] #alphabetize by region
+dt.SSP.regions3.pop.tot.IIASA <- dt.SSP.regions3[variable == "Population", c("region_code",keepYearList), with = FALSE]
+#dt.SSP.regions3.pop.tot.IIASA <- dt.SSP.regions3.pop.tot.IIASA[order(dt.SSP.regions3.pop.tot.IIASA$region)] #alphabetize by region
 # Remove the aggregates of 
 # "Population", "Population|Female" and "Population|Male"
 removeList <- c("Population", "Population|Female", "Population|Male")
-ssp3.pop.IIASA <-ssp3[!ssp3$variable %in% removeList,]
+dt.SSP.regions3.pop.IIASA <-dt.SSP.regions3[!variable %in% removeList,]
 
 #split the variable names apart where there is a | (eg. X|Y becomes X and Y and new columns are created)
-ssp3.pop.IIASA <- as.data.frame(cSplit(ssp3.pop.IIASA, 'variable', sep="|", type.convert=FALSE))
+dt.SSP.regions3.pop.IIASA <- as.data.frame(cSplit(dt.SSP.regions3.pop.IIASA, 'variable', sep="|", type.convert=FALSE))
 
 #name the new columns created by the spliting process above
-colnames(ssp3.pop.IIASA)[colnames(ssp3.pop.IIASA) == c("variable_1","variable_2","variable_3","variable_4")] <- 
+colnames(dt.SSP.regions3.pop.IIASA)[colnames(dt.SSP.regions3.pop.IIASA) == c("variable_1","variable_2","variable_3","variable_4")] <- 
   c("population","gender","ageGenderCode","education")
 
 #rename variables to align with the requirements names
-ssp3.pop.IIASA$ageGenderCode<- gsub("Aged","",ssp3.pop.IIASA$ageGenderCode)
-ssp3.pop.IIASA$ageGenderCode[ssp3.pop.IIASA$gender == "Female"] <- paste("SSPF", ssp3.pop.IIASA$ageGenderCode[ssp3.pop.IIASA$gender == "Female"], sep="")
-ssp3.pop.IIASA$ageGenderCode[ssp3.pop.IIASA$gender == "Male"] <- paste("SSPM", ssp3.pop.IIASA$ageGenderCode[ssp3.pop.IIASA$gender == "Male"], sep="")
-ssp3.pop.IIASA$ageGenderCode<- gsub("-","_",ssp3.pop.IIASA$ageGenderCode)
-ssp3.pop.IIASA$ageGenderCode<- gsub("\\+","Plus",ssp3.pop.IIASA$ageGenderCode)
-ssp3.pop.IIASA <- ssp3.pop.IIASA[order(ssp3.pop.IIASA$region),] 
+dt.SSP.regions3.pop.IIASA$ageGenderCode<- gsub("Aged","",dt.SSP.regions3.pop.IIASA$ageGenderCode)
+dt.SSP.regions3.pop.IIASA$ageGenderCode[dt.SSP.regions3.pop.IIASA$gender == "Female"] <- paste("dt.SSP.regionsF", dt.SSP.regions3.pop.IIASA$ageGenderCode[dt.SSP.regions3.pop.IIASA$gender == "Female"], sep="")
+dt.SSP.regions3.pop.IIASA$ageGenderCode[dt.SSP.regions3.pop.IIASA$gender == "Male"] <- paste("dt.SSP.regionsM", dt.SSP.regions3.pop.IIASA$ageGenderCode[dt.SSP.regions3.pop.IIASA$gender == "Male"], sep="")
+dt.SSP.regions3.pop.IIASA$ageGenderCode<- gsub("-","_",dt.SSP.regions3.pop.IIASA$ageGenderCode)
+dt.SSP.regions3.pop.IIASA$ageGenderCode<- gsub("\\+","Plus",dt.SSP.regions3.pop.IIASA$ageGenderCode)
+dt.SSP.regions3.pop.IIASA <- dt.SSP.regions3.pop.IIASA[order(dt.SSP.regions3.pop.IIASA$region),] 
 
 #remove rows that breakdown an age group by education
 removeList <- c("No Education","Primary Education", "Secondary Education", "Tertiary Education")
-ssp3.pop.IIASA <-ssp3.pop.IIASA[!ssp3.pop.IIASA$education %in% removeList,]
+dt.SSP.regions3.pop.IIASA <-dt.SSP.regions3.pop.IIASA[!dt.SSP.regions3.pop.IIASA$education %in% removeList,]
 
 #remove extraneous columns and keep only the ones needed
 keepList <- c("region", "ageGenderCode", yearList)
-ssp3.pop.IIASA <-ssp3.pop.IIASA[,keepList]
+dt.SSP.regions3.pop.IIASA <-dt.SSP.regions3.pop.IIASA[,keepList]
 
 # start process of creating a separate list for pregnant and lactating (P/L) women----
 #this list is for females who could be pregnant and lactating and have for the most part 
 #identical nutrient needs if they are not P/L
-ageRowsToSum <- c("SSPF15_19", "SSPF20_24",
-                  "SSPF25_29", "SSPF30_34",
-                  "SSPF35_39", "SSPF40_44", "SSPF45_49")
+ageRowsToSum <- c("dt.SSP.regionsF15_19", "dt.SSP.regionsF20_24",
+                  "dt.SSP.regionsF25_29", "dt.SSP.regionsF30_34",
+                  "dt.SSP.regionsF35_39", "dt.SSP.regionsF40_44", "dt.SSP.regionsF45_49")
 
 #pull out the relevant rows
-ssp3.pop.F15_49.IIASA <- ssp3.pop.IIASA[ssp3.pop.IIASA$ageGenderCode %in% ageRowsToSum,c("region","ageGenderCode",yearList)] 
+dt.SSP.regions3.pop.F15_49.IIASA <- dt.SSP.regions3.pop.IIASA[dt.SSP.regions3.pop.IIASA$ageGenderCode %in% ageRowsToSum,c("region","ageGenderCode",yearList)] 
 
 #sum the relevant rows (females aged 15-49 as those that could be pregnant or lactating) by region
-dt.tmp <- data.table(ssp3.pop.F15_49.IIASA)
-ssp3.pop.F15_49.sum.IIASA <- as.data.frame(dt.tmp[,lapply(.SD,sum),by=region, .SDcols = yearList])
+dt.tmp <- data.table(dt.SSP.regions3.pop.F15_49.IIASA)
+dt.SSP.regions3.pop.F15_49.sum.IIASA <- as.data.frame(dt.tmp[,lapply(.SD,sum),by=region, .SDcols = yearList])
 #add age column with the single value for the new age group
-ssp3.pop.F15_49.sum.IIASA$ageGenderCode <- rep("SSPF15_49",nrow(ssp3.pop.F15_49.sum.IIASA))
-#get rid of now extraneous rows in ssp3.pop.IIASA so no double counting
-ssp3.pop.IIASA <- ssp3.pop.IIASA[!ssp3.pop.IIASA$ageGenderCode %in% ageRowsToSum,]
-#add the SSPF15_49 row to ssp3.pop.IIASA
-ssp3.pop.IIASA <- rbind(ssp3.pop.IIASA,ssp3.pop.F15_49.sum.IIASA)
+dt.SSP.regions3.pop.F15_49.sum.IIASA$ageGenderCode <- rep("dt.SSP.regionsF15_49",nrow(dt.SSP.regions3.pop.F15_49.sum.IIASA))
+#get rid of now extraneous rows in dt.SSP.regions3.pop.IIASA so no double counting
+dt.SSP.regions3.pop.IIASA <- dt.SSP.regions3.pop.IIASA[!dt.SSP.regions3.pop.IIASA$ageGenderCode %in% ageRowsToSum,]
+#add the dt.SSP.regionsF15_49 row to dt.SSP.regions3.pop.IIASA
+dt.SSP.regions3.pop.IIASA <- rbind(dt.SSP.regions3.pop.IIASA,dt.SSP.regions3.pop.F15_49.sum.IIASA)
 #sort by region
-ssp3.pop.IIASA <- ssp3.pop.IIASA[order(ssp3.pop.IIASA$region),] 
+dt.SSP.regions3.pop.IIASA <- dt.SSP.regions3.pop.IIASA[order(dt.SSP.regions3.pop.IIASA$region),] 
 
 #check to see if population totals are the same. Uncomment to test
-dt.tmp <- data.table(ssp3.pop.IIASA)
+dt.tmp <- data.table(dt.SSP.regions3.pop.IIASA)
 setkey(dt.tmp,"region")
 pop.temp <- as.data.frame(dt.tmp[,lapply(.SD,sum),by=region, .SDcols = yearList])
-temp <- pop.temp$X2010 - ssp3.pop.tot.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
+temp <- pop.temp$X2010 - dt.SSP.regions3.pop.tot.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
 summary(temp) #the differences should be very small
 
 #now estimate the number of pregnant women and lactating women and add them
 #the estimate is based on the number of children aged 0 to 4. 
 #sum boys and girls 0 to 4
-kidsRows <- c("SSPF0_4","SSPM0_4")
+kidsRows <- c("dt.SSP.regionsF0_4","dt.SSP.regionsM0_4")
 #create a temporary data frame with just those rows
-kids.0_4 <- ssp3.pop.IIASA[ssp3.pop.IIASA$ageGenderCode %in% kidsRows,c("region",yearList)]
+kids.0_4 <- dt.SSP.regions3.pop.IIASA[dt.SSP.regions3.pop.IIASA$ageGenderCode %in% kidsRows,c("region",yearList)]
 dt.kids.0_4 <- data.table(kids.0_4)
 setkey(dt.kids.0_4,"region")
 dt.kids.sum <- dt.kids.0_4[,lapply(.SD,sum),by = "region"]
@@ -198,43 +180,43 @@ temp.preg <- as.data.frame(dt.kids.sum[,lapply(.SD, function(x) x * share.preg),
 temp.lact <- as.data.frame(dt.kids.sum[,lapply(.SD, function(x) x * share.lact),by="region"])
 
 #delete number of potentially pregnant and lactating women so no double counting
-removeList <- c("SSPF15_49")
-ssp3.pop.IIASA <-ssp3.pop.IIASA[!ssp3.pop.IIASA$ageGenderCode %in% removeList,]
+removeList <- c("dt.SSP.regionsF15_49")
+dt.SSP.regions3.pop.IIASA <-dt.SSP.regions3.pop.IIASA[!dt.SSP.regions3.pop.IIASA$ageGenderCode %in% removeList,]
 
 #add back number of non PL women
-dt.tmp <- as.data.table(ssp3.pop.F15_49.sum.IIASA)
+dt.tmp <- as.data.table(dt.SSP.regions3.pop.F15_49.sum.IIASA)
 dt.tmp2 <- as.data.table(temp.preg)
 setkey(dt.tmp,"region")
 
 cols <- paste0("X",seq(2010,2050,5))
-temp.nonPL <- ssp3.pop.F15_49.sum.IIASA[match(temp.preg$region,ssp3.pop.F15_49.sum.IIASA$region),cols] - 
+temp.nonPL <- dt.SSP.regions3.pop.F15_49.sum.IIASA[match(temp.preg$region,dt.SSP.regions3.pop.F15_49.sum.IIASA$region),cols] - 
   temp.preg[,cols] - 
   temp.lact[match(temp.preg$region,temp.lact$region),cols] 
-temp.nonPL$region <- ssp3.pop.F15_49.sum.IIASA$region
+temp.nonPL$region <- dt.SSP.regions3.pop.F15_49.sum.IIASA$region
 #add age column for the new P/L variables; also to temp.kids to be consistent
-temp.kids <- cbind(dt.kids.sum,ageGenderCode = "SSPKids0_4", stringsAsFactors = FALSE)
-temp.preg <- cbind(temp.preg,ageGenderCode = "SSPPreg", stringsAsFactors = FALSE)
-temp.lact <- cbind(temp.lact,ageGenderCode = "SSPLact", stringsAsFactors = FALSE)
-temp.nonPL <- cbind(temp.nonPL,ageGenderCode = "SSPF15_49", stringsAsFactors = FALSE)
+temp.kids <- cbind(dt.kids.sum,ageGenderCode = "dt.SSP.regionsKids0_4", stringsAsFactors = FALSE)
+temp.preg <- cbind(temp.preg,ageGenderCode = "dt.SSP.regionsPreg", stringsAsFactors = FALSE)
+temp.lact <- cbind(temp.lact,ageGenderCode = "dt.SSP.regionsLact", stringsAsFactors = FALSE)
+temp.nonPL <- cbind(temp.nonPL,ageGenderCode = "dt.SSP.regionsF15_49", stringsAsFactors = FALSE)
 
-#add new rows to ssp3.pop.IIASA
-ssp3.pop.IIASA <- rbind(ssp3.pop.IIASA,temp.preg,temp.lact,temp.nonPL)
-ssp3.pop.IIASA <- ssp3.pop.IIASA[with(ssp3.pop.IIASA, order(region, ageGenderCode)), ]
+#add new rows to dt.SSP.regions3.pop.IIASA
+dt.SSP.regions3.pop.IIASA <- rbind(dt.SSP.regions3.pop.IIASA,temp.preg,temp.lact,temp.nonPL)
+dt.SSP.regions3.pop.IIASA <- dt.SSP.regions3.pop.IIASA[with(dt.SSP.regions3.pop.IIASA, order(region, ageGenderCode)), ]
 
 #check to see if population totals are the same. Uncomment to test
-ssp3.pop.tot.IIASA <- ssp3.pop.tot.IIASA[order(ssp3.pop.tot.IIASA$region),] 
-dt.tmp <- data.table(ssp3.pop.IIASA)
+dt.SSP.regions3.pop.tot.IIASA <- dt.SSP.regions3.pop.tot.IIASA[order(dt.SSP.regions3.pop.tot.IIASA$region),] 
+dt.tmp <- data.table(dt.SSP.regions3.pop.IIASA)
 setkey(dt.tmp,"region")
 pop.temp <- as.data.frame(dt.tmp[,lapply(.SD,sum),by=region, .SDcols = yearList])
-temp <- pop.temp$X2010 - ssp3.pop.tot.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
+temp <- pop.temp$X2010 - dt.SSP.regions3.pop.tot.IIASA$X2010 #this is a dumb thing to do. At least make sure they are sorted by region
 summary(temp) #the differences should be very small
 
-dt.pop <- as.data.table(ssp3.pop.IIASA)
+dt.pop <- as.data.table(dt.SSP.regions3.pop.IIASA)
 dt.pop.melt <- melt(dt.pop,variable.name = "year",variable.factor = FALSE, 
                     id.vars = c("region","ageGenderCode"), measure.vars = yearList, value.name = "pop.value")
 
 repCons <- function(nutReq,common.nut) {
-  #remove the nutrient requirements for the female age groups in ageRowsToSum because they are already in SSPF15_49
+  #remove the nutrient requirements for the female age groups in ageRowsToSum because they are already in dt.SSP.regionsF15_49
   nutReq <- nutReq[!(nutReq$ageGenderCode %in% ageRowsToSum),]
   setkey(dt.pop.melt,"ageGenderCode")
   dt.temp <- dt.pop.melt[data.table(nutReq)]
@@ -246,7 +228,7 @@ repCons <- function(nutReq,common.nut) {
   dt.temp[,c(reqlist):= NULL]
   dt.temp.sum <- unique(dt.temp[,c("region","year",paste(common.nut,"sum",sep=".")),with=F])
   
-  dt.pop.IIASA <- as.data.table(ssp3.pop.tot.IIASA)
+  dt.pop.IIASA <- as.data.table(dt.SSP.regions3.pop.tot.IIASA)
   dt.pop.IIASA.melt <- melt(dt.pop.IIASA,id.vars = "region", 
                             measure.vars = yearList, variable.name = "year", variable.factor = FALSE,
                             value.name = "pop.tot")
@@ -291,7 +273,7 @@ creationInfo <- rbind(creationInfo, paste("Date of file creation:", Sys.Date()))
 #creationInfo <- rbind(creationInfo, paste("IMPACT data:", IMPACTfileName))
 creationInfo <- rbind(creationInfo, paste("Nutrient data:", nutrientFileName))
 creationInfo <- rbind(creationInfo, paste("Nutrient requirements data:", EARFileName))
-creationInfo <- rbind(creationInfo, paste("SSP data:", SSPdataZipFileName))
+creationInfo <- rbind(creationInfo, paste("dt.SSP.regions data:", dt.SSP.regionsdataZipFileName))
 addWorksheet(wbGeneral, sheetName="creation_Info")
 writeData(wbGeneral, creationInfo, sheet="creation_Info", startRow=1, startCol=1, rowNames = FALSE, colNames = FALSE)
 class(wbInfoGeneral$sheet_Name) <- 'hyperlink'
@@ -313,7 +295,7 @@ writeData(wbGeneral, req.metadata, sheet="MetaDataNutrnts", startRow=1, startCol
 wbInfoGeneral[(nrow(wbInfoGeneral)+1),] <- c("MetaDataNutrnts", "Information about the requirements sources")
 
 for (i in 1:length(reqs)) {
-  nutReq <- paste(reqs[i],"ssp",sep=".")
+  nutReq <- paste(reqs[i],"dt.SSP.regions",sep=".")
   dt.temp.internal <- repCons(eval(parse(text = nutReq)),eval(parse(text = common[i])))
   setkey(dt.temp.internal,"nutrient","region")
   
@@ -397,7 +379,7 @@ saveWorkbook(wbGeneral, xcelOutFileName, overwrite = TRUE)
 # 
 # 
 # #convert every 5 years data to every year
-# for (i in seq(2010,2050,5)) temp.wide[[paste0("X",i)]] <- rowMeans(SSPDat.NCAR[,paste0("X",c(i-5,i+5))])
+# for (i in seq(2010,2050,5)) temp.wide[[paste0("X",i)]] <- rowMeans(dt.SSP.regionsDat.NCAR[,paste0("X",c(i-5,i+5))])
 # 
 
 # # get the regions used by IMPACT
