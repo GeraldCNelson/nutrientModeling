@@ -1,0 +1,57 @@
+Package: nutrientModelling
+Title: Models Nutrient Intake and Share of Requirements for Plausible Futures
+Version: 0.0.0.9000
+Authors@R: c(
+  person("Gerald", "Nelson", email = "nelson.gerald.c@gmail.com",
+    role = c("aut", "cre")),
+  person("Brendan", "Power", email = "Brendan.Power@csiro.au",
+    role = c("ctb"), comment = "programming assistance"),
+  person("David", "Gustafson", email = "dgustafson@ilsi.org",
+    role = c("ctb")),
+  person("Keith", "Lividini", email = "k.lividini@cgiar.org",
+    role = c("ctb"), comment = "nutrition expert"),
+  person("Joanne", "Arsenault", email = "jearsenault@ucdavis.edu",
+    role = c("ctb"), comment = "nutrition expert"),
+  person("Keith", "Wiebe", email = "k.wiebe@cgiar.org",
+    role = c("ctb")),
+  person("Malcolm", "Riley", email = "malcolm.riley@csiro.au",
+    role = c("ctb"), comment = "nutrition expert"),
+  person("Mario", "Herrero", email = "mario.herrero@csiro.au",
+    role = c("ctb")),
+  person("Timothy", "Sulser", email = "T.Sulser@cgiar.org",
+    role = c("ctb"), comment = "programming assistance"),
+  person("Sherman ", "Robinson", email = "S.Robinson@cgiar.org",
+    role = c("ctb"), comment = "programming assistance"),
+  person("Jessica", "Bogard", email = "jessica.bogard@live.com",
+    role = c("ctb"), comment = "nutrition expert"),
+  person("Karen", "Cooper", email = "Karen.Cooper@nestle.com",
+    role = c("ctb"), comment = "nutrition expert"),
+  person("Derek", "Headey", email = "D.Headey@cgiar.org",
+    role = c("ctb")),
+  person("Roseline", "Remans", email = "rremans@ei.columbia.edu",
+    role = c("ctb")),
+  person("Daniel", "Mason-DCroz", email = "D.MASON-DCROZ@cgiar.org",
+    role = c("ctb"), comment = "programming assistance"))
+Description: The Nutrient Modelling package provides tools combine outputs from future
+    scenarios using the IMPACT model. It uses GDP, population and gender and age
+    distributions from the Shared Socioeconomic Profiles stored at IIASA, official values
+    of Recommended Daily Allowances (RDAs) and Estimated Average Requirements (EAR), and
+    expert assessments of the nutritional content of food items modelled in IMPACT.
+Depends: R (> 3.2)
+License: GPL-3
+LazyData: true
+Imports: data.table,
+    ggplot2,
+    roxygen2,
+    reshape2,
+    plotrix,
+    plyr,
+    dplyr,
+    openxlsx,
+    splitstackshape,
+    stringi,
+    tidyr
+Suggests: knitr,
+    rmarkdown,
+    testthat
+VignetteBuilder: knitr

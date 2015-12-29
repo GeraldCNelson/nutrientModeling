@@ -1,26 +1,27 @@
-#' @title Setup code for the nutrient modelling exercise
-#' @author Gerald C. Nelson, \email{nelson.gerald.c@@gmail.com}
-#' @keywords utilities
-# Intro -------------------------------------------------------------------
-#' @description 
-#' This script sets up a bunch of variables for use in all the other scripts. 
+#' Setup.R A script to set up needed variables.
 #' It should be run first. It is usually called with a 'source' command from other
 #' scripts to ensure this.
 
+#' @author Gerald C. Nelson, \email{nelson.gerald.c@@gmail.com}
+#' @keywords utilities
+# Intro -------------------------------------------------------------------
+#' @description
+
+
 #Copyright (C) 2015 Gerald C. Nelson, except where noted
 
-#     This program is free software: you can redistribute it and/or modify
-#     it under the terms of the GNU General Public License as published by
-#     the Free Software Foundation, either version 3 of the License, or
-#     (at your option) any later version.
-# 
-#     This program is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#     GNU General Public License for more details at http://www.gnu.org/licenses/.
+#     This program is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the Free
+#     Software Foundation, either version 3 of the License, or (at your option)
+#     any later version.
+#
+#     This program is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#     for more details at http://www.gnu.org/licenses/.
 
-#' Make sure required libraries are loaded
-#' 
+# Make sure required libraries are loaded
+
 require(roxygen2)
 require(openxlsx)
 require(entropy)
@@ -33,22 +34,23 @@ require(splitstackshape)
 require(plotrix)
 require(ggplot2)
 require(stringi)
-library("devtools")
-setwd("~/Documents/workspace/nutrientModeling")
+library(devtools)
+
+#setwd("~/Documents/workspace/nutrientModeling")
 
 # get rid of strings as factors, but reset on exit ----
 old <- options(stringsAsFactors = FALSE)
 on.exit(options(old), add = TRUE)
 
 # file names ---------------------
-#' This section is where the file names are assigned to variables. 
+#' This section is where the file names are assigned to variables.
 #' @param EARFileName
 EARFileName <- "data/DRI_IOM_V2.xlsx"
 
 # CSE - consumer support equivalent
 #Note: the price a consumer pays is Pc * (1-CSE)
 #' @param CSEFileName
-CSEFileName <- "data/IMPACTData/CSEs20150824.xlsx" 
+CSEFileName <- "data/IMPACTData/CSEs20150824.xlsx"
 #' @param nutrientFileName
 nutrientFileName <- "data/USDA GFS IMPACT V9.xlsx"
 
