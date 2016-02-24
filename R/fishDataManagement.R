@@ -1,4 +1,4 @@
-# Intro ___________________________________________________________________
+# Intro -----------------------
 #This script reads in fish data and parameters for IMPACT.
 
 #Copyright (C) 2015 Gerald C. Nelson, except where noted
@@ -13,11 +13,12 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details at http://www.gnu.org/licenses/.
 
-source("setup.R")
+source("R/dataPrep.setup.R")
 
 # fish supply in 1000 metric tons
+#' @param - fishS - supply of fish
 fishS <- read.xlsx(
-  fishInfoIMPACT,
+  IMPACTfish,
   sheet = "QS_FishSys",
   cols = 1:6,
   startRow = 3,
@@ -31,64 +32,18 @@ colnames(fishS) <-
     "freshCapt",
     "marine_capt")
 
-#rename fish_type to IMPACT commodity names
-fishNameIMPACT <-
-  c(
-    "c_shrimp",
-    "c_Crust",
-    "c_Mllsc",
-    "c_Salmon",
-    "c_FrshD",
-    "c_Tuna",
-    "c_OPelag",
-    "c_ODmrsl",
-    "c_OMarn",
-    "c_FshOil"
-  )
-fishqNameOld <-
-  c(
-    "Shrimp",
-    "Crust",
-    "Mllsc",
-    "Salmon",
-    "Dmrsl",
-    "Tuna",
-    "Cobswf",
-    "Eelstg",
-    "Tilapia",
-    "Pangas",
-    "Carp",
-    "Mullet",
-    "OFrshD",
-    "OCarp",
-    "OPelag",
-    "OMarn"
-  )
-IMPACT_code_lookup <-
-  c(
-    "c_shrimp",
-    "c_Crust",
-    "c_Mllsc",
-    "c_Salmon",
-    "c_FrshD",
-    "c_Tuna",
-    "c_FrshD",
-    "c_FrshD",
-    "c_FrshD",
-    "c_FrshD",
-    "c_FrshD",
-    "c_ODmrsl",
-    "c_FrshD",
-    "c_FrshD",
-    "c_OPelag",
-    "c_OMarn"
-  )
+#' @param - fishLookup - fish look up. production and consumption names and IMPACT names
+fishLookup <- read.xlsx(
+  IMPACTfish,
+  sheet = "IMPACT Commodities",
+  cols = 6:7,
+  startRow = 2,
+  colNames = TRUE
+)
 
-fishLookup <- data.frame(fishqNameOld, fishNameIMPACT)
-
-# fish demand in 1000 metric tons
+#' @param - fishD - fish demand in 1000 metric tons
 fishD <- read.xlsx(
-  fishInfoIMPACT,
+  IMPACTfish,
   sheet = "DemandStkChg",
   cols = 1:11,
   startRow = 3,
@@ -111,45 +66,61 @@ colnames(fishD) <-
 
 fishD[is.na(fishD)] <- 0
 fishD <- fishD[order(fishD$region),]
+
+#' @param - fishIncElast - fish income elasticity
 fishIncElast <- read.xlsx(
-  fishInfoIMPACT,
+  IMPACTfish,
   sheet = "IncDmdElas",
   cols = 1:11,
   startRow = 1,
   colNames = TRUE
 )
 
+colnames(fishIncElast) <- c("region","c_shrimp","c_Crust","c_Mllsc","c_Salmon","c_FrshD",
+"c_Tuna", "c_OPelag", "c_ODmrsl","c_OMarn", "c_FshOil")
+
 # need to create fish data for the new regions in the latest version of IMPACT
+regions.all <- getNewestVersion("regions.all")
+# merge regions.all and the IMPACT115fishIncElast to assign identical income elasticities
+# to all countries in an IMPACT3 region.
+temp <- as.data.table(merge(fishIncElast,regions.all, by.x = "region", by.y = "region_code.IMPACT115"))
+deleteColList <- c("region","region_name.IMPACT115")
+fishIncElast.IMPACT3 <- temp[,(deleteColList) := NULL]
 
-ctyNames.old <- sort(unique(fishD$region))
+# get list of all the fish codes
+temp <- names(fishIncElast.IMPACT3)
+fish_code <- temp[1:10]
 
-regionsLookup <- read.xlsx(
-  fishInfoIMPACT,
-  sheet = "IMPACT 115 Regions",
-  cols = 4:11,
-  rows = 3:120,
-  colNames = FALSE
+dt.FBS <- getNewestVersion("FBS")
+# get rid of extraneous columns
+deleteColList <- c("item_name","definition","IMPACT_missing_code","fish","alcohol",
+                   "FAOSTAT_country_code","item_code")
+dt.FBS[,(deleteColList) := NULL]
+
+#get rid of all rows other than those with domestic food supply (kcal/capita/day) and food (1000 tonnes)
+deleteRowList <- c(
+  "Domestic supply quantity",
+  "Feed",
+  "Seed",
+  "Waste",
+  "Processing",
+  "Other Util",
+  "Production",
+  "Import Quantity",
+  "Food supply quantity (kg/capita",
+  "Protein supply quantity",
+  "Fat supply quantity",
+  "Stock Variation",
+  "Export Quantity"
 )
 
-temp <-
-  as.data.frame(cSplit(regionsLookup, 'X1', sep = ".", type.convert = FALSE))
-temp$X1_2 <- gsub("\\(", "", temp$X1_2)
-temp$X1_2 <- gsub("\\)", "", temp$X1_2)
+# keep only rows with elements food (5142) and Food supply quantity (kg/capita/yr) (645)
+keepElements <- c(5142,645)
 
-temp2 <-
-  merge(
-    x = temp,
-    y = fishD,
-    by.x = "X1_1",
-    by.y = "region",
-    all = TRUE
-  )
-df.ctyNames <- as.data.frame(ctyNames, stringsAsFactors = FALSE)
-temp3 <-
-  merge(
-    x = temp2,
-    y = df.ctyNames,
-    by.x = "X1_2",
-    by.y = "ctyNames",
-    all = TRUE
-  )
+dt.FBS <- dt.FBS[element_code %in% keepElements, ]
+
+# select the rows that have one of the fish codes in the IMPACT_code column
+#dt.FBS.fish <- dt.FBS[IMPACT_code %in% fish_code,]
+setkey(dt.FBS,IMPACT_code)
+dt.FBS.fish <- dt.FBS[IMPACT_code %in% fish_code]
+

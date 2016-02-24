@@ -1,7 +1,12 @@
+#' @author Gerald C. Nelson, \email{nelson.gerald.c@@gmail.com}
+#' @keywords utilities, nutrient data, IMPACT food commodities nutrient lookup
 # Intro -------------------------------------------------------------------
-#This script reads in the nutrient lookup table for IMPACT commodities (USDA GFS IMPACT Vx).
-# It produces a data frame that has for 100 grams of each IMPACT commodity the amount of several nutrients
-# adjusted for bone in to boneless, edible portion, and cooking retention.
+#' @description
+#' This script reads in the nutrient lookup table for IMPACT commodities (USDA GFS IMPACT Vx).
+#' It produces a data frame that has for 100 grams of each IMPACT commodity the amount of several nutrients
+#' adjusted for bone in to boneless, edible portion, and cooking retention.
+#' Contributors to the work include Brendan Power (for coding assistance), and
+#' Joanne E. Arsenault, Malcom Reilly, Jessica Bogard, and Keith Lividini (for nutrition expertise)
 
 #Copyright (C) 2015 Gerald C. Nelson, except where noted
 
@@ -14,24 +19,22 @@
 #     but WITHOUT ANY WARRANTY; without even the implied warranty of
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
-# Contributors to the work include Brendan Power (for coding assistance), and
-# Joanne E. Arsenault, Malcom Reilly, Jessica Bogard, and Keith Lividini (for nutrition expertise)
 
-setwd("~/Documents/workspace/nutrientModeling")
-source("setup.R") #single script where data file names are stored
+source("R/setup.R")
 
 # Data loading code for nutrientCalcs -------------------------------------
-
-nutrients <- read.xlsx(
-  nutrientFileName,
+#' @param nutrients.raw
+nutrients.raw <- read.xlsx(
+  nutrientLU,
   sheet = 1,
   rows = 3:50,
   cols = 1:63,
   colNames = TRUE
 )
 
+#' @param nutrientNames_Units
 nutrientNames_Units <- read.xlsx(
-  nutrientFileName,
+  nutrientLU,
   sheet = 1,
   rows = 1:3,
   cols = 10:46,
@@ -56,11 +59,13 @@ colsToRemove <-
     "RetentionCode",
     "RetentionDescription"
   )
-nutrients <- nutrients[, !(names(nutrients) %in% colsToRemove)]
+#' @param nutrients
+nutrients.clean <- nutrients.raw[, !(names(nutrients.raw) %in% colsToRemove)]
 
 #list of columns with cooking retention values
+#' @param cookretn.cols
 cookretn.cols <-
-  colnames(nutrients[, grep('_cr', names(nutrients))])
+  colnames(nutrients.clean[, grep('_cr', names(nutrients.clean))])
 #get list of nutrients in the food nutrient lookup table
 #create list of columns that are not nutrients
 temp <-
@@ -68,8 +73,9 @@ temp <-
     "edible_share",
     "IMPACT_conversion",
     cookretn.cols)
+
 nutrients.food <-
-  colnames(nutrients[,!(names(nutrients) %in% temp)])
+  colnames(nutrients.clean[,!(names(nutrients.clean) %in% temp)])
 
 # macro <- c("energy", "protein", "fat", "carbohydrate", "fiber", "sugar")
 # minerals <- c("calcium", "iron", "potassium", "sodium", "zinc")
@@ -80,10 +86,10 @@ nutrients.food <-
 #convert NAs to 100 (percent) for edible_share, IMPACT_conversion, and cooking retention
 colsToConvert <-
   c("IMPACT_conversion", "edible_share", cookretn.cols)
-nutrients[colsToConvert][is.na(nutrients[colsToConvert])] <- 100
+nutrients.food[colsToConvert][is.na(nutrients.food[colsToConvert])] <- 100
 
 #convert the NAs to 0  in the nutrients columns
-nutrients[, nutrients.food][is.na(nutrients[, nutrients.food])] <- 0
+nutrients.food[, nutrients.food][is.na(nutrients.food[, nutrients.food])] <- 0
 
 # # change nutrient denominator unit from 100 gm to 1 kg;
 # commented out to leave units that nutritionists are familiar with

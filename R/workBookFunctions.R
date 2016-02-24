@@ -73,15 +73,15 @@ f.createGeneralWorksheet <- function() {
       stringsAsFactors = FALSE
     )
   
-  wbInfoGeneral[1, ] <-
+  wbInfoGeneral[1,] <-
     c("Sheet names", "Description of sheet contents")
-  wbInfoGeneral[(nrow(wbInfoGeneral) + 1), ] <-
+  wbInfoGeneral[(nrow(wbInfoGeneral) + 1),] <-
     c("creation_Info",
       "Information on creator, date, model version, etc.")
   
   #create a worksheet with info on the regions
   addWorksheet(wbGeneral, sheetName = "metadataRegions")
-  wbInfoGeneral[(nrow(wbInfoGeneral) + 1), ] <-
+  wbInfoGeneral[(nrow(wbInfoGeneral) + 1),] <-
     c("metadataRegions", "Region metadata")
   writeData(
     wbGeneral,
@@ -113,7 +113,7 @@ f.createGeneralWorksheet <- function() {
     rowNames = FALSE,
     colNames = FALSE
   )
-  wbInfoGeneral[(nrow(wbInfoGeneral) + 1), ] <-
+  wbInfoGeneral[(nrow(wbInfoGeneral) + 1),] <-
     c("MetaDataNutrnts",
       "Information about the requirements sources")
   
@@ -137,7 +137,7 @@ f.createGeneralWorksheet <- function() {
     gridExpand = TRUE
   )
   
-  wbInfoGeneral[(nrow(wbInfoGeneral) + 1), ] <-
+  wbInfoGeneral[(nrow(wbInfoGeneral) + 1),] <-
     c("IMPACTCommdList",
       "IMPACT commodities and their nutrient content")
   

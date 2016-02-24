@@ -1,6 +1,6 @@
 # Intro -------------------------------------------------------------------
-#This script reads in the Shared Socioeconomic Profiles information, does some manipulations of the data,
-#and pulls out just the population data
+#This script reads in the Shared Socioeconomic Profiles population data and does some manipulations
+#to align the SSP population data with the nutrient requirements age and gender structure data
 #In several places old inefficient code is commented out and replaced by cleaner code written by Brendan Power of CSIRO
 #Creates the following RDS files
 #data/SSPclean.rds cleaned up SSP file
@@ -24,66 +24,34 @@
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 
-source("setup.R")
+source("R/dataPrep.setup.R")
 
-# generate the nutrient requirements data frames
-source("EARfoodGroupCSEloading.R") # this script also runs nutrientDataLoading.R
+# # generate the nutrient requirements data frames
+# source("R/EARfoodGroupCSEloading.R") # this script also runs nutrientDataLoading.R
 
-#list of years to keep moved to setup.R
+# Read in the cleaned up SSP population data -------------------------------------
 
-# Read in and manipulate the SSP data -------------------------------------
-if (!file.exists("data/SSPclean.rds")) {
-  # - if a clean .Rdata file doesn't exist, read in csv file, once, do some manipulation and save as an .rdata file
-  SSP <-
-    read.csv(
-      unz(description = SSPdataZipFileLocation, file = SSPdataZipFileName),
-      stringsAsFactors = FALSE
-    )
-  SSP <-
-    SSP[c("MODEL", "SCENARIO", "REGION", "VARIABLE", keepYearList)]
-  #make all names lower case and change region to region_code
-  names(SSP) <-
-    c("model",
-      "scenario",
-      "country_code",
-      "variable",
-      keepYearList)
-  #save cleaned up file as an .rdata file
-  saveRDS(SSP, file = "data/SSPclean.rds")
-} else {
-  SSP <- readRDS(file = "data/SSPclean.rds")
-}
+dt.SSPPop <- getNewestVersion("SSPPopClean")
+setkey(dt.SSPPop, ISO_code)
+regionsLU <- getNewestVersion("regions.all")
+dt.SSPPop <- dt.SSPPop[regionsLU]
 
-# testing ways to aggregate SSP data to IMPACT 3 regions
+# Choose the region to aggregate to. The current (as of Feb 17, 2016 are "IMPACT3" and "IMPACT115" )
+regionChoice <- "IMPACT3"
+regionChoiceCode <- paste("region_code",regionChoice,sep=".")
+regionChoiceName <- paste("region_name",regionChoice,sep=".")
 
-dt.SSPaugmented <- as.data.table(SSP)
-#add new columns for region code and region name
-dt.SSPaugmented$region_code <-
-  dt.SSPaugmented$region_name <- rep("NA", nrow(dt.SSPaugmented))
-setkey(dt.SSPaugmented, country_code)
-# would be nice to speed up this for loop
-rnumFromGrep <- function(ctycode, lookUpcolumn) {
-  return(grep(ctycode, lookUpcolumn))
-}
-
-#This is still slow; would be nice to speed up more
-#ptm <- proc.time()
-for (i in 1:nrow(dt.SSPaugmented)) {
-  rnum <-
-    rnumFromGrep(dt.SSPaugmented$country_code[i],
-                 regions.IMPACT3$region_members)
-  #  rnum <- grep(dt.SSPaugmented$country_code[i],regions.IMPACT3$region_members)
-  dt.SSPaugmented[i, c("region_code", "region_name") := as.list(regions.IMPACT3[rnum, c("region_code", "region_name")])]
-}
-#proc.time() - ptm
-setkey(dt.SSPaugmented,
-       "model",
-       "scenario",
-       "variable",
-       "region_code")
+dt.SSPPop.melt <- melt(dt.SSPPop,
+                       id.vars = c("scenario", "ISO_code", regionChoiceCode,"ageGenderCode"),
+                       variable.name = "year",
+                       measure.vars = keepYearList)
+setkey(dt.SSPPop.melt)
+setkeyv(dt.SSPPop.melt,
+        c("scenario","ISO_code","ageGenderCode","year",
+          regionChoiceCode))
 
 dt.SSP.regions <-
-  dt.SSPaugmented[, lapply(.SD, sum), by = c("model", "scenario", "variable", "region_code", "region_name"),
+  dt.SSPPop[, lapply(.SD, sum), by = c("scenario", regionChoiceCode, regionChoiceName),
                   .SDcols = keepYearList]
 
 # end of testing
@@ -171,10 +139,10 @@ dt.SSP.regions3.pop.tot.IIASA <-
 #dt.SSP.regions3.pop.tot.IIASA <- dt.SSP.regions3.pop.tot.IIASA[order(dt.SSP.regions3.pop.tot.IIASA$region)] #alphabetize by region
 # Remove the aggregates of
 # "Population", "Population|Female" and "Population|Male"
-removeList <-
+deleteRowList <-
   c("Population", "Population|Female", "Population|Male")
 dt.SSP.regions3.pop.IIASA <-
-  dt.SSP.regions3[!variable %in% removeList, ]
+  dt.SSP.regions3[!variable %in% deleteRowList, ]
 
 #split the variable names apart where there is a | (eg. X|Y becomes X and Y and new columns are created)
 dt.SSP.regions3.pop.IIASA <-
@@ -208,13 +176,13 @@ dt.SSP.regions3.pop.IIASA <-
   dt.SSP.regions3.pop.IIASA[order(dt.SSP.regions3.pop.IIASA$region), ]
 
 #remove rows that breakdown an age group by education
-removeList <-
+deleteRowList <-
   c("No Education",
     "Primary Education",
     "Secondary Education",
     "Tertiary Education")
 dt.SSP.regions3.pop.IIASA <-
-  dt.SSP.regions3.pop.IIASA[!dt.SSP.regions3.pop.IIASA$education %in% removeList, ]
+  dt.SSP.regions3.pop.IIASA[!dt.SSP.regions3.pop.IIASA$education %in% deleteRowList, ]
 
 #remove extraneous columns and keep only the ones needed
 keepList <- c("region", "ageGenderCode", yearList)
@@ -288,9 +256,9 @@ temp.lact <-
     x * share.lact), by = "region"])
 
 #delete number of potentially pregnant and lactating women so no double counting
-removeList <- c("dt.SSP.regionsF15_49")
+deleteRowList <- c("dt.SSP.regionsF15_49")
 dt.SSP.regions3.pop.IIASA <-
-  dt.SSP.regions3.pop.IIASA[!dt.SSP.regions3.pop.IIASA$ageGenderCode %in% removeList, ]
+  dt.SSP.regions3.pop.IIASA[!dt.SSP.regions3.pop.IIASA$ageGenderCode %in% deleteRowList, ]
 
 #add back number of non PL women
 dt.tmp <- as.data.table(dt.SSP.regions3.pop.F15_49.sum.IIASA)
@@ -550,9 +518,9 @@ for (i in 1:length(reqs)) {
 
   assign(dt.name, dt.temp.internal)
   #  setnames(dt.temp.internal,dt.temp.internal,dt.name)
-  fname <- paste("results/", dt.name, ".rds", sep = "")
+  fname <- paste("results/", dt.name,Sys.Date(), ".rds", sep = "")
   print(fname)
-  saveRDS(eval(parse(text = dt.name)), file = fname)
+  saveRDS(eval(parse(text = dt.name),), file = fname)
   #fileEncoding = "Windows-1252"
 }
 
