@@ -26,82 +26,90 @@ source("R/dataPrep.setup.R")
 # Read in the FBS data from a zip file
 # FAO changed the structure of the zip file some time in 2015.
 # Code to read in the old structure remains below but is commented out
+# dt.FBSrawData <- as.data.table(read.csv(unzip(FBSdataZip, file = FBScsv),
+#                        stringsAsFactors = FALSE,
+#                        colClasses = list((character=1:7))))
 
-charCols <-  c("Country.Code","Country","Item.Code","Item","Element.Code","Element","Unit")
-numCols <- c("Y1961","Y1962","Y1963","Y1964","Y1965",
-             "Y1966","Y1967","Y1968","Y1969","Y1970",
-             "Y1971","Y1972","Y1973","Y1974","Y1975",
-             "Y1976","Y1977","Y1978","Y1979","Y1980",
-             "Y1981","Y1982","Y1983","Y1984","Y1985",
-             "Y1986","Y1987","Y1988","Y1989","Y1990",
-             "Y1991","Y1992","Y1993","Y1994","Y1995",
-             "Y1996","Y1997","Y1998","Y1999","Y2000",
-             "Y2001","Y2002","Y2003","Y2004","Y2005",
-             "Y2006","Y2007","Y2008","Y2009","Y2010",
-             "Y2011","Y2012","Y2013","Y2014","Y2015")
+# temp <- unz(FBSdataZip,FBScsv)
+# data <- read.table(unz(FBSdataZip, FBScsv), nrows=10, header=T, quote="\"", sep=",")
 
-# the columns which describe the state of the numeric values
-dropCols <- c("Y1961F","Y1962F","Y1963F","Y1964F","Y1965F",
-              "Y1966F","Y1967F","Y1968F","Y1969F","Y1970F",
-              "Y1971F","Y1972F","Y1973F","Y1974F","Y1975F",
-              "Y1976F","Y1977F","Y1978F","Y1979F","Y1980F",
-              "Y1981F","Y1982F","Y1983F","Y1984F","Y1985F",
-              "Y1986F","Y1987F","Y1988F","Y1989F","Y1990F",
-              "Y1991F","Y1992F","Y1993F","Y1994F","Y1995F",
-              "Y1996F","Y1997F","Y1998F","Y1999F","Y2000F",
-              "Y2001F","Y2002F","Y2003F","Y2004F","Y2005F",
-              "Y2006F","Y2007F","Y2008F","Y2009F","Y2010F",
-              "Y2011F","Y2012F","Y2013F","Y2014F","Y2015F")
+colCharacter = c("Country Code", "Country","Item Code","Item","Element Code","Element", "Unit" )
 
+# temp <- read_file(FBSdataZip,col_numeric(colNumeric),col_character("Country.Code"))
 
-# extract the FBScsv file, write it to the rData directory and report the path in zipout
-zipout <- unzip(FBSdataZip, file = FBScsv, exdir = rData)
-dt.FBSrawData <- fread(zipout,
-              drop = dropCols,
-                 stringsAsFactors = FALSE)
+temp <- unzip(FBSdataZip, file = FBScsv)
+dt.FBSrawData <- fread(temp, header = TRUE)
+file.remove(temp)
 
-for (col in numCols) set(dt.FBSrawData, j=col, value=as.numeric(dt.FBSrawData[[col]]))
+#temp <- read.csv("data-raw/FBSData/FoodBalanceSheets_E_All_Data.csv",nrows = 10)
 
 # old column names
 
 # colnames(FBSrawData) <- c("FAOSTAT_country_code", "country_name", "item_code", "item",
-# "element_group", "element_code", "element","year", "unit", "value", "flag")
-
-#add X to beginning of the year (X2009 instead of 2009), old version of the FBS data
-#dt.FBSraw[, year := paste("X", dt.FBSraw$year, sep = "")]
+# "element_group", "variable_code", "element","year", "unit", "value", "flag")
 
 colnames(dt.FBSrawData) <- c("FAOSTAT_country_code", "country_name", "item_code", "item",
-                             "element_code", "element","unit",
-                             "X1961","X1962","X1963","X1964","X1965",
-                             "X1966","X1967","X1968","X1969","X1970",
-                             "X1971","X1972","X1973","X1974","X1975",
-                             "X1976","X1977","X1978","X1979","X1980",
-                             "X1981","X1982","X1983","X1984","X1985",
-                             "X1986","X1987","X1988","X1989","X1990",
-                             "X1991","X1992","X1993","X1994","X1995",
-                             "X1996","X1997","X1998","X1999","X2000",
-                             "X2001","X2002","X2003","X2004","X2005",
-                             "X2006","X2007","X2008","X2009","X2010",
-                             "X2011","X2012","X2013","X2014","X2015")
+                          "variable_code", "element","unit",
+                          "X1961","X1961F","X1962","X1962F","X1963","X1963F","X1964","X1964F","X1965","X1965F",
+                          "X1966","X1966F","X1967","X1967F","X1968","X1968F","X1969","X1969F","X1970","X1970F",
+                          "X1971","X1971F","X1972","X1972F","X1973","X1973F","X1974","X1974F","X1975","X1975F",
+                          "X1976","X1976F","X1977","X1977F","X1978","X1978F","X1979","X1979F","X1980","X1980F",
+                          "X1981","X1981F","X1982","X1982F","X1983","X1983F","X1984","X1984F","X1985","X1985F",
+                          "X1986","X1986F","X1987","X1987F","X1988","X1988F","X1989","X1989F","X1990","X1990F",
+                          "X1991","X1991F","X1992","X1992F","X1993","X1993F","X1994","X1994F","X1995","X1995F",
+                          "X1996","X1996F","X1997","X1997F","X1998","X1998F","X1999","X1999F","X2000","X2000F",
+                          "X2001","X2001F","X2002","X2002F","X2003","X2003F","X2004","X2004F","X2005","X2005F",
+                          "X2006","X2006F","X2007","X2007F","X2008","X2008F","X2009","X2009F","X2010","X2010F",
+                          "X2011","X2011F","X2012","X2012F","X2013","X2013F","X2014","X2014F","X2015","X2015F")
 
+#this drops all the ...F columns which provide information for each year on the data in that year
+colKeepList <- c("FAOSTAT_country_code", "country_name", "item_code", "item",
+                 "variable_code", "element","unit",
+                 "X1961","X1962","X1963","X1964","X1965",
+                 "X1966","X1967","X1968","X1969","X1970",
+                 "X1971","X1972","X1973","X1974","X1975",
+                 "X1976","X1977","X1978","X1979","X1980",
+                 "X1981","X1982","X1983","X1984","X1985",
+                 "X1986","X1987","X1988","X1989","X1990",
+                 "X1991","X1992","X1993","X1994","X1995",
+                 "X1996","X1997","X1998","X1999","X2000",
+                 "X2001","X2002","X2003","X2004","X2005",
+                 "X2006","X2007","X2008","X2009","X2010",
+                 "X2011","X2012","X2013","X2014","X2015")
+
+dt.FBSraw <- dt.FBSrawData[,colKeepList, with = FALSE]
+
+# improve on some element names
+dt.FBSraw[element=="Food", element := "foodMT"]
+dt.FBSraw[element=="Food supply quantity (kg/capita/yr)", element := "perCapKg"]
+dt.FBSraw[element=="Food supply (kcal/capita/day)",element := "perCapKcal"]
+          dt.FBSraw[element=="Protein supply quantity (g/capita/day)", element := "perCapProt"]
+dt.FBSraw[element=="Fat supply quantity (g/capita/day)", element := "perCapFat"]
+
+# change 'element' to 'variable' to make it consistent with other data sources
+setnames(dt.FBSraw,old=c("element","variable_code"),new = c("variable","variable_code"))
 
 #how to drop years with the previous version of the FBS data
 # remove years before 2010. The latest year is 2011 currently.
 # setkey(dt.FBSraw,year)
 # dt.FBSraw <- dt.FBSraw[year > 2009,]
 
-# FBSregionsToDrop is defined in dataPrep.setup.R
-dt.FBSrawData <- dt.FBSrawData[!country_name %in% FBSregionsToDrop,]
-
-#keep just the years from 2000 to 2011
-FBSkeepYearList <- c("X2000","X2001","X2002","X2003","X2004",
-                     "X2005","X2006","X2007","X2008","X2009","X2010","X2011")
-
+#keep just the years in keepYearList.FBS
 colKeepListYears <- c("FAOSTAT_country_code", "country_name", "item_code", "item",
-                 "element_code", "element","unit",
-                 FBSkeepYearList)
+                 "variable_code", "variable","unit",
+                 keepYearList.FBS)
 
-dt.FBSraw <- dt.FBSrawData[,colKeepListYears, with = FALSE]
+dt.FBSraw <- dt.FBSraw[,colKeepListYears, with = FALSE]
+
+#old version of convert selected columns to character class
+#charConvertList <- c("FAOSTAT_country_code","variable_code","item_code","unit","year")
+
+#old version of convert selected columns to numeric class
+charConvertList <- c("FAOSTAT_country_code","variable_code","item_code","unit")
+dt.FBSraw[,(keepYearList.FBS) := lapply(.SD, as.numeric), .SDcols=keepYearList.FBS]
+
+#add X to beginning of the year (X2009 instead of 2009), old version of the FBS data
+#dt.FBSraw[, year := paste("X", dt.FBSraw$year, sep = "")]
 
 # Read in a worksheet with the list of FBS food items by code, name, definition, and IMPACT commodity code
 dt.FBScommodLookup <- as.data.table(read.xlsx(FBSCommodityInfo,
@@ -113,9 +121,8 @@ dt.FBScommodLookup <- as.data.table(read.xlsx(FBSCommodityInfo,
 charConvertList <- c("item_code")
 for (col in charConvertList) set(dt.FBScommodLookup, j=col, value=as.character(dt.FBScommodLookup[[col]]))
 
-setkey(dt.FBScommodLookup,item_code)
-setkey(dt.FBSraw,item_code)
-dt.FBS <- dt.FBSraw[dt.FBScommodLookup]
+# remove the item called "Miscellaneous"
+dt.FBScommodLookup <- dt.FBScommodLookup[!item_name == "Miscellaneous",]
 
 # Read in the region lookup table, created in dataPrep.regions.R
 regions.all <- getNewestVersion("regions.all")
@@ -131,9 +138,12 @@ charConvertList <- c("ISO3","FAOSTAT")
 dt.FBSNameLookup <- dt.FBSNameLookup[, lapply(.SD, as.character), .SDcols=charConvertList]
 setnames(dt.FBSNameLookup,c("ISO3","FAOSTAT"),c("ISO_code","FAOSTAT_country_code"))
 
-setkey(dt.FBS,FAOSTAT_country_code)
+setkey(dt.FBSraw,FAOSTAT_country_code)
 setkey(dt.FBSNameLookup,FAOSTAT_country_code)
-dt.FBS <- dt.FBS[dt.FBSNameLookup]
+dt.FBS <- dt.FBSraw[dt.FBSNameLookup]
+
+# regions.ISO <- read.xlsx(ISOCodes)
+# colnames(regions.ISO) <- c("ISO_code", "country_name")
 
 # # Check for aggregations of countries; this should have no content
 # FBSDat.countryAggs <- subset(dt.FBS,!(ISO_code %in% regions.ISO$ISO_code))
@@ -171,10 +181,38 @@ dt.FBS.commods <- dt.FBS[!item %in% aggregates]
 
 #remove rows where FBS category is 'Miscellaneous' because we don't have an IMPACT equivalent
 dt.FBS.commods <- dt.FBS.commods[!item == "Miscellaneous"]
-dt.FBScommodLookup <- dt.FBScommodLookup[!item_name == "Miscellaneous"]
+
+# ARE (United Arab Emirates) doesn't have entries for kcals from alcoholic beverages, even zero
+
 #include IMPACT code and nonIMPACT code assignment in the commodities data frame
-setkey(dt.FBS.commods,item_code,item_name,definition, IMPACT_code,IMPACT_missing_code, alcohol,fish)
-setkey(dt.FBScommodLookup,item_code,item_name,definition, IMPACT_code, IMPACT_missing_code,alcohol,fish)
+setkey(dt.FBS.commods,item_code)
+setkey(dt.FBScommodLookup,item_code)
 
 temp <- dt.FBS.commods[dt.FBScommodLookup]
-saveRDS(temp, file = paste(mData,"/FBS.",Sys.Date(),".rds",sep=""))
+deleteColList <- c("FAOSTAT_country_code","IMPACT_missing_code","fish","alcohol")
+temp[,(deleteColList) := NULL]
+
+idVars <- c( "country_name","item_code","item",
+"variable_code","variable","unit","ISO_code","item_name","definition",
+"IMPACT_code")
+dt.FBS.commods.melt <- melt(temp,
+                       id.vars = idVars,
+                       variable.name = "year",
+                       measure.vars = keepYearList.FBS,
+                       variable.factor = FALSE)
+
+# need to sum individual FBS commodities to the IMPACT commodity they are in
+dt.FBS.commods.melt[,value.sum := sum(value), by = list(ISO_code,variable, IMPACT_code,year)]
+# keep "value" around in case we need to compare it
+
+#now get rid of info that is not needed
+keepListCol <- c("country_name", "variable_code", "variable", "unit", "ISO_code",
+"IMPACT_code", "year", "value.sum")
+dt.temp <- dt.FBS.commods.melt[,keepListCol, with=FALSE]
+dt.FBS.commods.final <-
+  unique(dt.temp[, c(key(dt.temp), keepListCol), with = FALSE])
+setnames(dt.FBS.commods.final,old=c("value.sum"),new = c("value"))
+dt.FBS.commods.final[order(ISO_code)]
+removeOldVersions("FBS")
+saveRDS(dt.FBS.commods.final, file = paste(mData,"/FBS.",Sys.Date(),".rds",sep=""))
+

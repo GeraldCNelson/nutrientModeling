@@ -317,13 +317,12 @@ colnames(regions.IMPACT3) <-
   c("region_code.IMPACT3", "region_name.IMPACT3")
 #' @param regions.IMPACT3.region_name.IMPACT3 regions in IMPACT3 that are only one country
 regions.IMPACT3.cty <-
-  regions.IMPACT3[!regions.IMPACT3$region_code.IMPACT3 %in% regions.IMPACT3.plus$region_code.IMPACT3, ]
+  regions.IMPACT3[!regions.IMPACT3$region_code.IMPACT3 %in% regions.IMPACT3.plus$region_code.IMPACT3,]
 regions.IMPACT3.cty$ISO_code <-
   regions.IMPACT3.cty$region_code.IMPACT3
 regions.IMPACT3 <- rbind(regions.IMPACT3.cty, regions.IMPACT3.plus)
 regions.IMPACT3 <-
-  regions.IMPACT3[order(regions.IMPACT3$ISO_code),]
-
+  regions.IMPACT3[order(regions.IMPACT3$ISO_code), ]
 
 # Create regions.IMPACT115 and regions.IMPACT115.plus ----
 
@@ -396,62 +395,107 @@ dt.SSP <- getNewestVersion("SSPPopClean")
 #' @param regions.SSP SSP regions
 regions.SSP <-
   as.data.frame(sort(unique(dt.SSP$ISO_code)), stringsAsFactors = FALSE) #there are 194 regions
+
 regions.SSP[, 2] <- regions.SSP[, 1]
 colnames(regions.SSP) <- c("ISO_code", "region_code.SSP")
 #' @param regions.all - lookup table for all regions (IMPACT3, IMPACT115, SSP)
-regions.all.ISO <- merge(regions.ISO,regions.IMPACT, by = "ISO_code", all = TRUE)
+regions.all.ISO <-
+  merge(regions.ISO, regions.IMPACT, by = "ISO_code", all = TRUE)
 regions.all.SSP <-
   merge(regions.SSP, regions.all.ISO, by = "ISO_code", all = TRUE)
 
 # add IMPACT3 standard world regions ----
 
 IMPACTstdRegions <- read.xlsx(IMPACTstdRegions)
-colnames(IMPACTstdRegions) <- c("region_code.IMPACT3","region_code.IMPACTstandard","region_name.IMPACTstandard","region_name.IMPACT3")
-IMPACTstdRegions <- IMPACTstdRegions[,c("region_code.IMPACT3","region_code.IMPACTstandard")]
+colnames(IMPACTstdRegions) <-
+  c(
+    "region_code.IMPACT3",
+    "region_code.IMPACTstandard",
+    "region_name.IMPACTstandard",
+    "region_name.IMPACT3"
+  )
+IMPACTstdRegions <-
+  IMPACTstdRegions[, c("region_code.IMPACT3", "region_code.IMPACTstandard")]
 
-IMPACT.world.regions.lookup <- data.frame(region_code.IMPACTstandard =
-                                       c("EAP","EUR","FSU","LAC","MEN","NAM","SAS","SSA"),
-                                     region_name.IMPACTstandard =
-                                       c("East Asia and Pacific","Europe","Former Soviet Union","Latin America and Caribbean",
-                                         "Middle East and North Africa","North America","South Asia","Africa south of the Sahara"))
-regions.IMPACTworld <- merge(IMPACTstdRegions,IMPACT.world.regions.lookup, by = "region_code.IMPACTstandard", all = TRUE)
+IMPACT.world.regions.lookup <-
+  data.frame(
+    region_code.IMPACTstandard =
+      c("EAP", "EUR", "FSU", "LAC", "MEN", "NAM", "SAS", "SSA"),
+    region_name.IMPACTstandard =
+      c(
+        "East Asia and Pacific",
+        "Europe",
+        "Former Soviet Union",
+        "Latin America and Caribbean",
+        "Middle East and North Africa",
+        "North America",
+        "South Asia",
+        "Africa south of the Sahara"
+      )
+  )
+regions.IMPACTworld <-
+  merge(IMPACTstdRegions,
+        IMPACT.world.regions.lookup,
+        by = "region_code.IMPACTstandard",
+        all = TRUE)
 
 # create regions.all ----
 regions.all <-
-  merge(regions.all.SSP, regions.IMPACTworld, by = "region_code.IMPACT3", all = TRUE)
+  merge(regions.all.SSP,
+        regions.IMPACTworld,
+        by = "region_code.IMPACT3",
+        all = TRUE)
 
 # Read in the worksheet that has the FAO country code-ISO country name lookup
-FBSNameLookup <- read.xlsx(FAOCountryNameCodeLookup,
-                                            sheet = 1,
-                                            startRow = 1,
-                                            colNames = TRUE)
+FBSNameLookup <- read.xlsx(
+  FAOCountryNameCodeLookup,
+  sheet = 1,
+  startRow = 2,
+  colNames = FALSE
+)
+colnames(FBSNameLookup) <- c("Short.name", "Official.name", "ISO_code", "ISO2_code",
+                             "UNI_code", "UNDP_code", "FAOSTAT_code", "GAUL_code")
+FBSNameLookup$FAOSTAT_code <- as.character(FBSNameLookup$FAOSTAT_code)
 
-#convert to character and leave just ISO code and FAOSTAT code
-colKeeplist <- c("ISO3","FAOSTAT")
-FBSNameLookup <- FBSNameLookup[,colKeeplist]
-FBSNameLookup$FAOSTAT <- as.character(FBSNameLookup$FAOSTAT)
+regions.all <-
+  merge(regions.all,
+        FBSNameLookup,
+        by = "ISO_code",
+        all = TRUE)
+newColOrder <- c("ISO_code", "region_code.SSP", "FAOSTAT_code","region_code.IMPACT115",
+  "region_code.IMPACT3", "region_code.IMPACTstandard", "country_name.ISO",
+  "region_name.IMPACT115", "region_name.IMPACT3", "region_name.IMPACTstandard",
+  "Short.name", "Official.name", "ISO2_code", "UNI_code", "UNDP_code",
+  "GAUL_code")
+regions.all <- regions.all[newColOrder]
 
-#remove a peskey 'country' JEY (Jersey)
-regions.all <- regions.all[!regions.all$ISO_code %in% "JEY",]
-regions.all <- regions.all[order(regions.all$ISO_code),]
+# remove a pesky 'country' JEY (Jersey)
+deleteListRow <- c("JEY")
+regions.all <-
+  regions.all[!regions.all$ISO_code %in% deleteListRow, ]
+regions.all <- regions.all[order(regions.all$ISO_code), ]
 
-#rearrange the column order
-regions.all <- regions.all[c(
-  "ISO_code",
-  "region_code.SSP",
-  "region_code.IMPACT115",
-  "region_code.IMPACT3",
-  "region_code.IMPACTstandard",
-  "country_name.ISO",
-  "region_name.IMPACT115",
-  "region_name.IMPACT3",
-  "region_name.IMPACTstandard")]
+# #rearrange the column order
+# regions.all <- regions.all[c(
+#   "ISO_code",
+#   "region_code.SSP",
+#   "region_code.IMPACT115",
+#   "region_code.IMPACT3",
+#   "region_code.IMPACTstandard",
+#   "country_name.ISO",
+#   "region_name.IMPACT115",
+#   "region_name.IMPACT3",
+#   "region_name.IMPACTstandard"
+# )]
 
+removeOldVersions("regions.all")
+removeOldVersions.xlsx("regions.all")
 saveRDS(regions.all,
         paste(mData, "/regions.all.", Sys.Date(), ".rds", sep = ""))
 
 write.xlsx(
   regions.all,
   paste(mData, "/regions.all.", Sys.Date(), ".xlsx", sep = ""),
-  colWidths = "auto",colNames = TRUE)
- 
+  colWidths = "auto",
+  colNames = TRUE
+)

@@ -16,7 +16,7 @@
 
 #' @description
 #' read in the IMPACT data from a gdx file and prepare for analysis
-#' the gdxrrw package for R is needed to run this. It is available at this url, not from CRAN.
+#' the gdxrrw package is needed to run this. It is available at this url, not from CRAN.
 #' @source \url{https://support.gams.com/gdxrrw:interfacing_gams_and_r}
 
 source("R/dataPrep.setup.R")
@@ -29,131 +29,93 @@ temp <- gdxInfo(gdxName = IMPACTgdx, dump=FALSE, returnList=F, returnDF=TRUE)
 df.gdx.param <- temp$parameters
 keepList <- c("name","text") #this removes index, dim, card, doms, and domnames
 df.gdx.param <- df.gdx.param[,keepList]
-saveRDS(df.gdx.param, file = paste(IMPACTDataClean,"/IMPACTmetaData.",Sys.Date(),".rds",sep=""))
-write.xlsx(df.gdx.param, file = paste(IMPACTDataClean,"/IMPACTmetaData.",Sys.Date(),".xlsx",sep=""))
 
-regions.all <- getNewestVersion("regions.all")
+removeOldVersionsIMPACT("IMPACTmetaData")
+write.xlsx(df.gdx.param[,keepList],file = paste(iData,"/IMPACTMetadata.",Sys.Date(),".xlsx",sep=""))
 
 #get all the possible IMPACT regions
 #' @param dt.IMPACTregions
-dt.IMPACTregions <- as.data.table(regions.all[,c("region_code.IMPACT3","region_name.IMPACT3")])
-#setnames(dt.IMPACTregions, old=c("CTY","CTYName"), new=c("region","regionName"))
-setkey(dt.IMPACTregions)
-dt.IMPACTregions <- unique(dt.IMPACTregions)
+dt.IMPACTregions <- as.data.table(read.xlsx(IMPACT3regions))
+setnames(dt.IMPACTregions, old=c("CTY","CTYName"), new=c("region_code.IMPACT3","regionName"))
 
-# landUse variables have data for model, scenario, region, year, commodity, water source, and value 
-#' @param landVars
-landVars <-c("AREACTYX0", "YLDCTYX0","ANMLNUMCTYX0")
+processIMPACT3Data <- function(varName, catNames) {
+  dt.temp <-
+    as.data.table(rgdx.param(IMPACTgdx, varName, ts = T, names = catNames))
+  dt.temp[, year := paste("X", dt.temp$year, sep = "")]
+  dt.temp <- dt.temp[year %in% keepYearList]
+  dt.temp <-
+    as.data.table(rapply(dt.temp, as.character, classes = "factor", how = "replace"))
+  #setorder(dt.temp, scenario, IMPACT_code, region_code.IMPACT3, year)
+  setorderv(dt.temp, cols = catNames)
+  if (varName != "PWX0" ) {
+    setkey(dt.temp, region_code.IMPACT3)
+    dt.temp <-
+      merge(dt.temp, dt.IMPACTregions, by = "region_code.IMPACT3", all = TRUE)
+    dt.temp[region_code.IMPACT3  == "SDN", region_code.IMPACT3 := "SDP"]
+  }
+  #fix the Sudan problem, at least temporarily
+  removeOldVersionsIMPACT(varName)
+  saveRDS(dt.temp,
+          paste(IMPACTDataClean, "/",varName,".", Sys.Date(),".rds", sep = "")
+  )
+  return(dt.temp)
+}
 
-# Commodity variables have data for model, scenario, region, year, commodity, and value 
-#' @param commodVars
-commodVars <-
-  c("PCX0", "QSX0", "QSUPX0", "QDX0", "QFX0", "QBFX0",
+#' @param landVars - scenario, region_code.IMPACT3, landUse,IMPACT_code,year, value
+vars.land <-
+  c("AREACTYX0", "YLDCTYX0", "ANMLNUMCTYX0")
+catNames.land <- c("scenario","IMPACT_code","region_code.IMPACT3","landUse","year","value")
+dtlist.land <- lapply(vars.land,processIMPACT3Data,catNames = catNames.land)
+
+for (i in 1:length(dtlist.land)) {
+  temp <- dtlist.land[[i]]
+  varName <- vars.land[i]
+assign(paste("dt", varName, sep = "."), temp)
+}
+
+#' @param commodVars - scenario, region_code.IMPACT3, IMPACT_code,year, value
+vars.commods <-
+  c("PCX0", "AREACTYX0", "YLDCTYX0",
+    "ANMLNUMCTYX0", "QSX0", "QSUPX0", "QDX0", "QFX0", "QBFX0",
     "QLX0", "QINTX0", "QOTHRX0", "QEX0", "QMX0","PerCapKCAL_com","FoodAvailability")
+catNames.commod <- c("scenario","IMPACT_code","region_code.IMPACT3","year","value")
+dtlist.commods <- lapply(vars.commods,processIMPACT3Data,catNames = catNames.commod)
 
-# Region variables have data for model, scenario, region, year, and value
+for (i in 1:length(dtlist.commods)) {
+  temp <- dtlist.commods[[i]]
+  varName <- vars.commods[i]
+  assign(paste("dt", varName, sep = "."), temp)
+}
+
 #' @param regionVars
-regionVars <-
-  c(
-    "GDPX0", "pcGDPX0",  "TotalMalnourished",
+vars.region <-
+  c("GDPX0", "pcGDPX0",  "TotalMalnourished",
     "PerCapKCAL", "PopX0", "ShareAtRisk", "PopulationAtRisk")
+catNames.region <- c("scenario","region_code.IMPACT3","year","value")
+dtlist.region <- lapply(vars.region,processIMPACT3Data,catNames = catNames.region)
 
-#' @param worldVars - have data for model, scenario, year, and value
-worldVars <- "PWX0"
-
-#deleteRowList <- c("X2005", "X2006", "X2007", "X2008", "X2009")
-#use keepYearList instead
-
-# read in land use variables that distinguish whether irrigated or not ----
-catNames <- c("scenario","IMPACT_code","region_code.IMPACT3","irrig","year","value")
-for (i in 1: length(landVars)) {
-  tempName <- landVars[i]
-  dt.temp <- as.data.table(rgdx.param(IMPACTgdx, tempName,ts=T, names = catNames))
-  #change SDN (Sudan) to SDP (Sudan plus) in the region data from the gdx
-  dt.temp[region_code.IMPACT3 == "SDN", region_code.IMPACT3 := "SDP"]
-  #change SSD (South Sudan) to SDP (Sudan plus) in the region data from the gdx
-  dt.temp[region_code.IMPACT3 == "SSD", region_code.IMPACT3 := "SDP"]
-  dt.temp[, year := paste("X", dt.temp$year, sep = "")]
-  dt.temp <- dt.temp[year %in% keepYearList]
-  dt.temp <- as.data.table(rapply(dt.temp, as.character, classes="factor", how="replace"))
-  setorder(dt.temp, scenario, IMPACT_code, region_code.IMPACT3, irrig, year,value)
-  # setnames(dt.temp, old=c("value"), new=tempName)
-  setkey(dt.temp,scenario, IMPACT_code,region_code.IMPACT3,irrig, year,value)
-  setkey(dt.IMPACTregions)
-  dt.temp <- merge(dt.temp,dt.IMPACTregions, all=TRUE)
-  setcolorder(dt.temp, c("scenario", "region_code.IMPACT3","region_name.IMPACT3","IMPACT_code","irrig", "year","value"))
-  setorder(dt.temp, scenario,region_code.IMPACT3,region_name.IMPACT3,
-           IMPACT_code,year, na.last=FALSE)
-  saveRDS(dt.temp,paste(IMPACTDataClean,"/",tempName,".",Sys.Date(),".rds",sep=""))
-  assign(paste("dt",tempName,sep="."),dt.temp)
+for (i in 1:length(dtlist.region)) {
+  temp <- dtlist.region[[i]]
+  varName <- vars.region[i]
+  assign(paste("dt", varName, sep = "."), temp)
 }
 
-# read in commodVars ----
-catNames <- c("scenario","IMPACT_code","region_code.IMPACT3","year","value")
-for (i in 1: length(commodVars)) {
-  tempName <- commodVars[i]
-  dt.temp <- as.data.table(rgdx.param(IMPACTgdx, tempName,ts=T, names = catNames))
-  #change SDN (Sudan) to SDP (Sudan plus) in the region data from the gdx
-  dt.temp[region_code.IMPACT3 == "SDN", region_code.IMPACT3 := "SDP"]
-  #change SSD (South Sudan) to SDP (Sudan plus) in the region data from the gdx
-  dt.temp[region_code.IMPACT3 == "SSD", region_code.IMPACT3 := "SDP"]
-  dt.temp[, year := paste("X", dt.temp$year, sep = "")]
-  dt.temp <- dt.temp[year %in% keepYearList]
-  dt.temp <- as.data.table(rapply(dt.temp, as.character, classes="factor", how="replace"))
-  setorder(dt.temp, scenario, IMPACT_code, region_code.IMPACT3, year,value)
-  setkey(dt.temp,scenario, IMPACT_code,region_code.IMPACT3,year,value)
-  setkey(dt.IMPACTregions)
-  dt.temp <- merge(dt.temp,dt.IMPACTregions, all=TRUE)
-  setcolorder(dt.temp, c("scenario", "region_code.IMPACT3","region_name.IMPACT3","IMPACT_code", "year","value"))
-  setorder(dt.temp, scenario,region_code.IMPACT3,region_name.IMPACT3,
-           IMPACT_code,year, na.last=FALSE)
-  saveRDS(dt.temp,paste(IMPACTDataClean,"/",tempName,".",Sys.Date(),".rds",sep=""))
-  assign(paste("dt",tempName,sep="."),dt.temp)
+#' @param worldVars
+vars.world <- "PWX0"
+catNames.world <- c("scenario","IMPACT_code","year","value")
+dtlist.world <- lapply(vars.world,processIMPACT3Data,catNames = catNames.world)
+
+for (i in 1:length(dtlist.world)) {
+  temp <- dtlist.world[[i]]
+  varName <- vars.world[i]
+  assign(paste("dt", varName, sep = "."), temp)
 }
 
-# read in regionVars ----
-catNames <- c("scenario","region_code.IMPACT3","year","value")
-for (i in 1: length(regionVars)) {
-  tempName <- regionVars[i]
-  dt.temp <- as.data.table(rgdx.param(IMPACTgdx, tempName,ts=T, names = catNames))
-  #change SDN (Sudan) to SDP (Sudan plus) in the region data from the gdx
-  dt.temp[region_code.IMPACT3 == "SDN", region_code.IMPACT3 := "SDP"]
-  #change SSD (South Sudan) to SDP (Sudan plus) in the region data from the gdx
-  dt.temp[region_code.IMPACT3 == "SSD", region_code.IMPACT3 := "SDP"]
-  dt.temp[, year := paste("X", dt.temp$year, sep = "")]
-  dt.temp <- dt.temp[year %in% keepYearList]
-  dt.temp <- as.data.table(rapply(dt.temp, as.character, classes="factor", how="replace"))
-  setkey(dt.temp,scenario, region_code.IMPACT3,year,value)
-  setkey(dt.IMPACTregions)
-  dt.temp <- merge(dt.temp,dt.IMPACTregions, all=TRUE)
-  setcolorder(dt.temp, c("scenario", "region_code.IMPACT3","region_name.IMPACT3", "year","value"))
-  setorder(dt.temp, scenario,region_code.IMPACT3,region_name.IMPACT3,year, na.last=FALSE)
-  saveRDS(dt.temp,paste(IMPACTDataClean,"/",tempName,".",Sys.Date(),".rds",sep=""))
-  assign(paste("dt",tempName,sep="."),dt.temp)
-}
-
-# read in worldVars ----
-catNames <- c("scenario","IMPACT_code","year","value")
-for (i in 1: length(worldVars)) {
-  tempName <- worldVars[i]
-  dt.temp <- as.data.table(rgdx.param(IMPACTgdx, tempName,ts=T, names = catNames))
-  dt.temp[, year := paste("X", dt.temp$year, sep = "")]
-  dt.temp <- dt.temp[year %in% keepYearList]
-  dt.temp <- as.data.table(rapply(dt.temp, as.character, classes="factor", how="replace"))
-  setorder(dt.temp, scenario, IMPACT_code, year)
-  setkey(dt.temp,scenario,year,value)
-  setkey(dt.IMPACTregions)
-  setcolorder(dt.temp, c("scenario","IMPACT_code", "year","value"))
-  setorder(dt.temp, scenario,IMPACT_code,year, na.last=FALSE)
-  saveRDS(dt.temp,paste(IMPACTDataClean,"/",tempName,".",Sys.Date(),".rds",sep=""))
-  assign(paste("dt",tempName,sep="."),dt.temp)
-}
-
-# read in CSE data ----
 #' @param dt.CSEs
 dt.CSEs <- as.data.table(
   read.xlsx(CSEs,cols=c(1:3)))
-setnames(dt.CSEs, old=c("CTY","C","CSE"), new=c("region_code.IMPACT3","IMPACT_code","value"))
+setnames(dt.CSEs, old=c("CTY","C","CSE"), new=c("region_code.IMPACT3","IMPACT_code","CSE"))
+set(dt.CSEs, which(is.na(dt.CSEs[["CSE"]])), "CSE", 0)
 setorder(dt.CSEs, region_code.IMPACT3, IMPACT_code)
 saveRDS(dt.CSEs,paste(IMPACTDataClean,"/CSEs.",Sys.Date(),".rds",sep=""))
 
@@ -165,12 +127,19 @@ dt.PWX0.food <- dt.PWX0[IMPACT_code %in% IMPACTfoodCommodList]
 #' @param dt.CSEs.food
 dt.CSEs.food <- dt.CSEs[IMPACT_code %in% IMPACTfoodCommodList]
 
-# #combine all relevant data tables for analysis
-# 
-# dtList <- list(dt.FoodAvailability, dt.pcGDPX0, dt.PCX0.food, dt.PWX0.food, dt.CSEs.food)
-# setkey(dt.FoodAvailability, "scenario", "region_code.IMPACT3", "IMPACT_code","year")
-# setkey(dt.PWX0.food, "scenario", "IMPACT_code","year")
-# setkey(dt.CSEs.food, "region_code.IMPACT3", "IMPACT_code")
-# setkey(dt.PCX0.food, "scenario", "region_code.IMPACT3", "IMPACT_code","year")
-# setkey(dt.pcGDPX0, "scenario", "region_code.IMPACT3","year")
-# saveRDS(dt.IMPACTfood, file = paste(IMPACTDataClean,"/IMPACTfood.",Sys.Date(),".rds",sep=""))
+#combine all relevant data tables for analysis
+
+setkey(dt.FoodAvailability, "scenario", "region_code.IMPACT3", "IMPACT_code")
+setkey(dt.PWX0.food, "scenario", "IMPACT_code")
+setkey(dt.CSEs.food, "region_code.IMPACT3", "IMPACT_code")
+setkey(dt.PCX0.food, "scenario", "region_code.IMPACT3", "IMPACT_code")
+setkey(dt.pcGDPX0, "scenario", "region_code.IMPACT3")
+
+#' @param dt.IMPACTfood
+# dt.IMPACTfood <-
+#
+# setorder(dt.IMPACTfood, scenario, region, IMPACT_code, year)
+# setkey(dt.IMPACTfood, "scenario", "region_code.IMPACT3", "IMPACT_code")
+#
+# saveRDS(dt.IMPACTfood, file = paste(IMPACTDataClean,"/IMPACTfood",Sys.Date(),".rds",sep=""))
+devtools::document()

@@ -19,22 +19,24 @@
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 source(file = "R/dataPrep.setup.R")
 
-SSP <-
-  read.csv(unzip(SSPdataZip, file = SSPcsv),
-           stringsAsFactors = FALSE)
-# drop all years except those in keepYearList, created in dataPrep.setup.R
-SSP <-
-  SSP[c("MODEL", "SCENARIO", "REGION", "VARIABLE", "UNIT", keepYearList)]
+temp <- unzip(SSPdataZip, file = SSPcsv)
+dt.SSP <- fread(temp, header = TRUE, stringsAsFactors = FALSE)
+file.remove(temp)
+# add X to the year column name
+setnames(dt.SSP, make.names(names(dt.SSP)))
 
-#make all names lower case and change region to region_code
-names(SSP) <-
-  c("model",
-    "scenario",
-    "ISO_code",
-    "variable",
-    "unit",
-    keepYearList)
-dt.SSP <- as.data.table(SSP)
+# drop all years except those in keepYearList, created in dataPrep.setup.R
+colKeepList <- c("MODEL", "SCENARIO", "REGION", "VARIABLE", "UNIT", keepYearList)
+dt.SSP <- dt.SSP[,colKeepList, with = FALSE]
+#make all names lower case and change region to ISO_code
+oldNameList <- names(dt.SSP)
+newNameList <- c("model",
+                 "scenario",
+                 "ISO_code",
+                 "variable",
+                 "unit",
+                 keepYearList)
+setnames(dt.SSP,oldNameList,newNameList)
 
 #There are 21 scenarios; 4 each for SSP scenarios 1, 2, 3, and 5 and
 # 5 for SSP scenario 4.
@@ -53,7 +55,21 @@ dt.SSP <- as.data.table(SSP)
 # create cleaned up GDP SSP data ---
 #' @param dt.SSP.GDP - data table with the SSP results from the model identified in modelListGDP
 dt.SSP.GDP <- dt.SSP[model == modelListGDP, ]
-saveRDS(dt.SSP.GDP, file = paste(mData, "/SSPGDPClean.", Sys.Date(), ".rds",
+deleteListCol <- "model"
+dt.SSP.GDP[,(deleteListCol) := NULL]
+deleteListRow <- "Population"
+dt.SSP.GDP <- dt.SSP.GDP[!variable %in% deleteListRow,]
+idVars <- c("scenario","ISO_code","variable","unit")
+dt.SSP.GDP.melt <- melt(dt.SSP.GDP,
+                              id.vars = idVars,
+                              variable.name = "year",
+                              measure.vars = keepYearList,
+                              variable.factor = FALSE)
+# change GDP|PPP to GDP because R doesn't like | to be used in a variable name
+dt.SSP.GDP.melt[,variable:= "GDP"]
+removeOldVersions("SSPGDPClean")
+setorder(dt.SSP.GDP.melt,scenario,ISO_code)
+saveRDS(dt.SSP.GDP.melt, file = paste(mData, "/SSPGDPClean.", Sys.Date(), ".rds",
                             sep = ""))
 
 # create cleaned up population SSP data ---
@@ -151,7 +167,13 @@ keepList <- c("scenario","ISO_code", "ageGenderCode", keepYearList)
 colDeleteList <- c("model", "gender","education","population","unit")
 dt.SSP.pop.step2[, (colDeleteList) := NULL]
 
-#save cleaned up pop file as an .rds file
-saveRDS(dt.SSP.pop.step2, file = paste(mData, "/SSPPopClean.", Sys.Date(), ".rds",
+idVars <- c("scenario","ISO_code","ageGenderCode")
+dt.SSP.pop.step2.melt <- melt(dt.SSP.pop.step2,
+                            id.vars = idVars,
+                            variable.name = "year",
+                            measure.vars = keepYearList,
+                            variable.factor = FALSE)
+removeOldVersions("SSPPopClean")
+saveRDS(dt.SSP.pop.step2.melt, file = paste(mData, "/SSPPopClean.", Sys.Date(), ".rds",
                            sep = ""))
 
