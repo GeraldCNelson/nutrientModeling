@@ -142,9 +142,20 @@ metadata[(nrow(metadata) + 1), ] <-  c(modelListPop,"List of SSP models to extra
 modelListGDP <- "OECD Env-Growth"
 metadata[(nrow(metadata) + 1), ] <-  c(modelListGDP,"List of SSP models to extract population info from")
 
+#' @param scenarioList - list of scenarios in the SSP data
+scenarioList <-
+  c("SSP1_v9_130325",
+    "SSP2_v9_130325",
+    "SSP3_v9_130325",
+    "SSP4_v9_130325",
+    "SSP5_v9_130325"
+  )
 # Food Balance Sheet Information information ----
 #' @source \url{http://faostat3.fao.org/download/FB/FBS/E}
-
+#'
+#' FBS to ISO lookup table
+#' @source  \url{http://www.fao.org/countryprofiles/iso3list/en/}
+FBSlookupTableLink <- "http://www.fao.org/countryprofiles/iso3list/en/"
 #' @param FBSdataZipFile
 FBSdataZipFile <- "FoodBalanceSheets_E_All_Data.zip"
 
@@ -154,6 +165,7 @@ list <- unzip(FBSdataZip,list = T)
 createDate <- as.character(list$Date[1])
 metadata[(nrow(metadata) + 1), ] <-  c(FBSdataZip,"Zip file containing the FBS data")
 metadata[(nrow(metadata) + 1), ] <-  c("FBS data creation date",createDate)
+metadata[(nrow(metadata) + 1), ] <-  c("FBS lookup table", FBSlookupTableLink)
 
 #' @param FBScsv
 temp <-
@@ -161,7 +173,7 @@ temp <-
 FBScsv <- temp$Name[1]
 
 #' @param FBSCommodityInfoFileName - worksheet with the list of FBS food items by code, name, definition, and IMPACT commodity code
-FBSCommodityInfoFileName <- "FBStoIMPACTlookupV2.xlsx"
+FBSCommodityInfoFileName <- "FBStoIMPACTlookupV3.xlsx"
 
 #' @param FBSCommodityInfoFileName - worksheet with the list of FBS food items by code, name, definition, and IMPACT commodity code
 FBSCommodityInfo <- paste(FBSData,FBSCommodityInfoFileName,sep="/")
@@ -185,71 +197,6 @@ metadata[(nrow(metadata) + 1), ] <-  c(ISOCodes,"List of all ISO 3 codes and the
 #' Username identifies the author of the current output in excel files
 #' @param userName
 userName <- "Gerald Nelson"
-
-IMPACTfoodCommodList <-
-  sort(
-    c(
-      "cbeef",
-      "cpork",
-      "clamb",
-      "cpoul",
-      "ceggs",
-      "cmilk",
-      "cbarl",
-      "cmaiz",
-      "cmill",
-      "crice",
-      "csorg",
-      "cwhea",
-      "cocer",
-      "ccass",
-      "cpota",
-      "cswpt",
-      "cyams",
-      "corat",
-      "cbean",
-      "cchkp",
-      "ccowp",
-      "clent",
-      "cpigp",
-      "copul",
-      "cbana",
-      "cplnt",
-      "csubf",
-      "ctemf",
-      "cvege",
-      "csugr",
-      "cgrnd",
-      "cgdol",
-      "crpsd",
-      "crpol",
-      "csoyb",
-      "csbol",
-      "csnfl",
-      "csfol",
-      "cplol",
-      "cpkol",
-      "ctols",
-      "ctool",
-      "ccoco",
-      "ccafe",
-      "cteas",
-      "cothr"
-    )
-  )
-
-#' list of years to keep
-#' @param keepYearList
-keepYearList <-
-  c("X2010",
-    "X2015",
-    "X2020",
-    "X2025",
-    "X2030",
-    "X2035",
-    "X2040",
-    "X2045",
-    "X2050")
 
 #These regions are reported as their individual member countries during the relevant
 # time period (e.g. after 1999 for Belgium-Luxembourg). Their data entries are all NA.
@@ -276,6 +223,8 @@ if (test %in% "yes") {
   temp <- gdxInfo(gdxName = IMPACTgdx, dump=FALSE, returnList=F, returnDF=TRUE)
 }
 
+removeOldVersions("inputFileList")
+removeOldVersions.xlsx("inputFileList")
 write.xlsx(metadata,file=paste(mData,"/inputFileList.",Sys.Date(),".xlsx",sep=""),
            colWidths="auto")
 saveRDS(metadata,file = paste(mData,"/inputFileList.",Sys.Date(),".rds",sep=""))

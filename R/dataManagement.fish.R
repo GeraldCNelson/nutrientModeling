@@ -269,6 +269,7 @@ for (scenarioChoice in scenarioList) {
 }
 
 # add SSP population ---
+setkeyv(dt.SSPPopClean, c("scenario", "ISO_code", "year"))
 dt.SSPPopTot <-
   dt.SSPPopClean[, sum(value), by = key(dt.SSPPopClean)]
 setnames(dt.SSPPopTot, "V1", "pop.tot")
