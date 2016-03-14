@@ -5,8 +5,8 @@ setwd("~/Documents/workspace/nutrientModeling")
 
 require(roxygen2)
 require(openxlsx)
-require(entropy)
-require(reshape2)
+#require(entropy)- commented out to check if needed
+#require(reshape2) - commented out to check if needed
 require(plyr)
 require(dplyr)
 require(tidyr)
@@ -16,7 +16,7 @@ require(plotrix)
 require(ggplot2)
 require(stringi)
 library(devtools)
-library(gdxrrw)
+
 
 # file locations ----
 
@@ -119,7 +119,7 @@ for (i in length(shortNameList)) {
 cleanup <- function(inName, outName) {
   removeOldVersions(outName)
   removeOldVersions.xlsx(outName)
-  saveRDS(inName,
+  saveRDS(eval(parse(text = inName)),
           paste(mData, "/",outName,".", Sys.Date(), ".rds", sep = ""))
 
   write.xlsx(

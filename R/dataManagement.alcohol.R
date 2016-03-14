@@ -34,7 +34,8 @@ setkey(dt.SSPGDP, scenario, ISO_code)
 
 # lag and difference SSP GDP -----
 #dt.SSPGDP[, GDP.lag1:=c(NA, value[-.N]), by = c("ISO_code","scenario")][, delta.GDP := value - GDP.lag1]
-dt.SSPGDP[, GDP.lag1 :=shift(value), by=c("ISO_code","scenario")][, delta.GDP := value - GDP.lag1]
+dt.SSPGDP[, GDP.lag1 :=shift(value), by=c("ISO_code","scenario")]
+dt.SSPGDP[, delta.GDP := value - GDP.lag1]
 # prepare the FBS data -----
 dt.FBS <- getNewestVersion("FBS")
 
@@ -197,9 +198,6 @@ setnames(dt.SSPPopTot,"V1","pop.tot")
 setkeyv(dt.SSPPopTot, c("scenario","ISO_code","year"))
 setkeyv(dt.final, c("scenario","ISO_code","year"))
 dt.final[,pop:= dt.SSPPopTot$pop]
-inName <- "dt.final"
-outName <- "fishScenarios"
-cleanup(inName,outName)
 inName <- "dt.final"
 outName <- "alcScenarios"
 cleanup(inName,outName)

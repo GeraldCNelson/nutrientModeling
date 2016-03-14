@@ -18,7 +18,7 @@
 #' read in the IMPACT data from a gdx file and prepare for analysis
 #' the gdxrrw package is needed to run this. It is available at this url, not from CRAN.
 #' @source \url{https://support.gams.com/gdxrrw:interfacing_gams_and_r}
-
+library(gdxrrw)
 source("R/dataPrep.setup.R")
 igdx(gdxLib)
 # get a dataframe that has the meta data for the gdx file
@@ -142,4 +142,5 @@ setkey(dt.pcGDPX0, "scenario", "region_code.IMPACT3")
 # setkey(dt.IMPACTfood, "scenario", "region_code.IMPACT3", "IMPACT_code")
 #
 # saveRDS(dt.IMPACTfood, file = paste(IMPACTDataClean,"/IMPACTfood",Sys.Date(),".rds",sep=""))
-devtools::document()
+#devtools::document()
+unload(gdxrrw)
