@@ -173,7 +173,6 @@ keepList <- c("scenario", "ISO_code", "ageGenderCode", keepYearList)
 colDeleteList <-
   c("model", "gender", "education", "population", "unit")
 dt.SSP.pop.step2[, (colDeleteList) := NULL]
-
 idVars <- c("scenario", "ISO_code", "ageGenderCode")
 dt.SSP.pop.step2.melt <- melt(
   dt.SSP.pop.step2,

@@ -40,18 +40,7 @@ Description: The Nutrient Modelling package provides tools combine outputs from 
 Depends: R (> 3.2)
 License: GPL-3
 LazyData: true
-Imports: data.table,
-    ggplot2,
-    roxygen2,
-    reshape2,
-    plotrix,
-    plyr,
-    dplyr,
-    openxlsx,
-    splitstackshape,
-    stringi,
-    tidyr,
-    gdxrrw
+Imports: data.table, ggplot2, roxygen2, plotrix, plyr, dplyr, openxlsx, splitstackshape, stringi, tidyr, gdxrrw
 Suggests: knitr,
     rmarkdown,
     testthat
