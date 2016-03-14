@@ -33,8 +33,8 @@ setorder(dt.SSPGDP, scenario, ISO_code, year)
 setkey(dt.SSPGDP, scenario, ISO_code)
 
 # lag and difference SSP GDP -----
-dt.SSPGDP[, GDP.lag1 := c(NA, value[-.N]), by = c("ISO_code","scenario")][, delta.GDP := value - GDP.lag1]
-
+#dt.SSPGDP[, GDP.lag1:=c(NA, value[-.N]), by = c("ISO_code","scenario")][, delta.GDP := value - GDP.lag1]
+dt.SSPGDP[, GDP.lag1 :=shift(value), by=c("ISO_code","scenario")][, delta.GDP := value - GDP.lag1]
 # prepare the FBS data -----
 dt.FBS <- getNewestVersion("FBS")
 

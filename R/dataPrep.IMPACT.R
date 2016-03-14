@@ -22,7 +22,7 @@
 source("R/dataPrep.setup.R")
 igdx(gdxLib)
 # get a dataframe that has the meta data for the gdx file
-temp <- gdxInfo(gdxName = IMPACTgdx, dump=FALSE, returnList=F, returnDF=TRUE)
+temp <- gdxInfo(gdxName = IMPACTgdx, dump=FALSE, returnList=FALSE, returnDF=TRUE)
 #extract just the list of parameters
 
 #' @param df.gdx.param
@@ -40,7 +40,7 @@ setnames(dt.IMPACTregions, old=c("CTY","CTYName"), new=c("region_code.IMPACT3","
 
 processIMPACT3Data <- function(varName, catNames) {
   dt.temp <-
-    as.data.table(rgdx.param(IMPACTgdx, varName, ts = T, names = catNames))
+    as.data.table(rgdx.param(IMPACTgdx, varName, ts = TRUE, names = catNames))
   dt.temp[, year := paste("X", dt.temp$year, sep = "")]
   dt.temp <- dt.temp[year %in% keepYearList]
   dt.temp <-

@@ -161,7 +161,7 @@ FBSdataZipFile <- "FoodBalanceSheets_E_All_Data.zip"
 
 #' @param FBSdataZip
 FBSdataZip <- paste(FBSData, FBSdataZipFile, sep = "/")
-list <- unzip(FBSdataZip,list = T)
+list <- unzip(FBSdataZip,list = TRUE)
 createDate <- as.character(list$Date[1])
 metadata[(nrow(metadata) + 1), ] <-  c(FBSdataZip,"Zip file containing the FBS data")
 metadata[(nrow(metadata) + 1), ] <-  c("FBS data creation date",createDate)
@@ -220,7 +220,7 @@ if (test %in% "yes") {
   temp <- read.xlsx(nutrientLU)
   temp <- read.xlsx(EARs)
   igdx(gdxLib)
-  temp <- gdxInfo(gdxName = IMPACTgdx, dump=FALSE, returnList=F, returnDF=TRUE)
+  temp <- gdxInfo(gdxName = IMPACTgdx, dump=FALSE, returnList=FALSE, returnDF=TRUE)
 }
 
 removeOldVersions("inputFileList")

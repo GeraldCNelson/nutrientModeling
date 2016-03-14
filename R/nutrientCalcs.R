@@ -32,7 +32,7 @@
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details at http://www.gnu.org/licenses/.
 
-source(file = "R/setup.R")
+source(file = "R/setup.global.R")
 
 # Load functions for the rest of the script
 # source(file="nutrientFunctions.R") # may not be needed now (Nov 13)

@@ -10,7 +10,7 @@ wbInfIncShare <- tmp[[2]]
 tmp.out <-
   by(incomeShare, incomeShare[, c("scenario")], f.write.incShare.sheet, wbIncShare)
 tmp <-
-  as.data.frame(matrix(unlist(tmp.out), nrow = length(tmp.out), byrow = T))
+  as.data.frame(matrix(unlist(tmp.out), nrow = length(tmp.out), byrow = TRUE))
 colnames(tmp) <- colnames(wbInfIncShare)
 wbInfIncShare <- rbind(wbInfIncShare, tmp)
 f.finalizeWB(wbIncShare, wbInfIncShare, nut.name = "IncShare")
@@ -22,7 +22,7 @@ wbInfNut <- tmp[[2]]
 tmp.out <-
   by(nutShare, nutShare[, c("food.group.code", "nutrient", "scenario")], f.write.nut.sheet, wbNut)
 tmp <-
-  as.data.frame(matrix(unlist(tmp.out), nrow = length(tmp.out), byrow = T))
+  as.data.frame(matrix(unlist(tmp.out), nrow = length(tmp.out), byrow = TRUE))
 colnames(tmp) <- colnames(wbInfNut)
 wbInfNut <- rbind(wbInfNut, tmp)
 f.finalizeWB(wbNut, wbInfNut, short.name)
@@ -34,7 +34,7 @@ wbInfoGeneral <- tmp[[2]]
 tmp.out <-
   by(nutShareTot, nutShareTot[, c("nutrient", "scenario")], f.write.nut.sum.sheet, wbNutsum)
 tmp <-
-  as.data.frame(matrix(unlist(tmp.out), nrow = length(tmp.out), byrow = T))
+  as.data.frame(matrix(unlist(tmp.out), nrow = length(tmp.out), byrow = TRUE))
 colnames(tmp) <- colnames(wbInfsum)
 wbInfIncShare <- rbind(wbInfsum, tmp)
 f.finalizeWB(
