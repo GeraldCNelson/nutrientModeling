@@ -49,10 +49,6 @@ req.metadata <- read.xlsx(EARs, sheet = 1, colNames = FALSE)
 format(req.metadata, justify = c("left"))
 #' @param req.EAR
 
-#' @param req.EAR
-req.EAR <- getNewestVersion("nutrients")
-
-
 req.EAR <-
   read.xlsx(
     EARs,
@@ -61,6 +57,7 @@ req.EAR <-
     cols = 3:24,
     colNames = TRUE
   )
+
 #' @param req.RDA.vits
 req.RDA.vits <-
   read.xlsx(
@@ -79,6 +76,7 @@ req.RDA.minrls <-
     cols = 3:18,
     colNames = TRUE
   )
+
 #' @param req.RDA.macro
 req.RDA.macro <-
   read.xlsx(
@@ -88,6 +86,7 @@ req.RDA.macro <-
     cols = 3:10,
     colNames = TRUE
   )
+
 #' @param req.UL.vits
 req.UL.vits <-
   read.xlsx(
@@ -97,6 +96,7 @@ req.UL.vits <-
     cols = 3:18,
     colNames = TRUE
   )
+
 #' @param req.UL.minrls
 req.UL.minrls <-
   read.xlsx(
@@ -106,6 +106,7 @@ req.UL.minrls <-
     cols = 3:22,
     colNames = TRUE
   )
+
 #' @param req.AMDR
 req.AMDR <-
   read.xlsx(
@@ -154,102 +155,7 @@ req.AMDR <- req.AMDR[, c("ageGenderCode", common.AMDR)]
 # of 5-9 year olds (this is number of 5-8 year olds) – and then adjust
 # all the others in a similar manner.
 
-male.ssp <-
-  c(
-    "SSPM5_9",
-    "SSPM10_14",
-    "SSPM15_19",
-    "SSPM20_24",
-    "SSPM25_29",
-    "SSPM30_34",
-    "SSPM35_39",
-    "SSPM40_44",
-    "SSPM45_49",
-    "SSPM50_54",
-    "SSPM55_59",
-    "SSPM60_64",
-    "SSPM65_69",
-    "SSPM70_74",
-    "SSPM75_79",
-    "SSPM80_84",
-    "SSPM85_89",
-    "SSPM90_94",
-    "SSPM95_99",
-    "SSPM100Plus"
-  )
-male.dri <-
-  c(
-    "Chil4_8",
-    "M9_13",
-    "M14_18",
-    "M19_30",
-    "M19_30",
-    "M31_50",
-    "M31_50",
-    "M31_50",
-    "M31_50",
-    "M31_50",
-    "M51_70",
-    "M51_70",
-    "M51_70",
-    "M70Plus",
-    "M70Plus",
-    "M70Plus",
-    "M70Plus",
-    "M70Plus",
-    "M70Plus",
-    "M70Plus"
-  )
-male <- data.frame(male.ssp, male.dri, stringsAsFactors = FALSE)
-
-female.ssp <-
-  c(
-    "SSPF5_9",
-    "SSPF10_14",
-    "SSPF15_19",
-    "SSPF20_24",
-    "SSPF25_29",
-    "SSPF30_34",
-    "SSPF35_39",
-    "SSPF40_44",
-    "SSPF45_49",
-    "SSPF50_54",
-    "SSPF55_59",
-    "SSPF60_64",
-    "SSPF65_69",
-    "SSPF70_74",
-    "SSPF75_79",
-    "SSPF80_84",
-    "SSPF85_89",
-    "SSPF90_94",
-    "SSPF95_99",
-    "SSPF100Plus"
-  )
-female.dri <-
-  c(
-    "Chil4_8",
-    "F9_13",
-    "F14_18",
-    "F19_30",
-    "F19_30",
-    "F31_50",
-    "F31_50",
-    "F31_50",
-    "F31_50",
-    "F31_50",
-    "F51_70",
-    "F51_70",
-    "F51_70",
-    "F70Plus",
-    "F70Plus",
-    "F70Plus",
-    "F70Plus",
-    "F70Plus",
-    "F70Plus",
-    "F70Plus"
-  )
-female <-
-  data.frame(female.ssp, female.dri, stringsAsFactors = FALSE)
+ageGroupLU <- read.xlsx(SSP_DRI_ageGroupLU)
 
 children <- c("Inf0_0.5", "Inf0.5_1", "Chil1_3")
 
@@ -265,15 +171,17 @@ reqsList <-
 for (j in reqsList) {
   temp2 <- eval(parse(text = j))
   temp2[is.na(temp2)] <- 0
-  for (i in 1:nrow(male)) {
-    temp <- temp2[temp2$ageGenderCode == male[i, 2], ]
-    temp[1, 1] <- male[i, 1]
+  #males
+  for (i in 1:nrow(ageGroupLU)) {
+    temp <- temp2[temp2$ageGenderCode == ageGroupLU[i, 2], ]
+    temp[1, 1] <- ageGroupLU[i, 1]
     # print(temp[1,1])
     temp2 <- rbind(temp2, temp)
   }
-  for (i in 1:nrow(female)) {
-    temp <- temp2[temp2$ageGenderCode == female[i, 2], ]
-    temp[1, 1] <- female[i, 1]
+  #females
+  for (i in 1:nrow(ageGroupLU)) {
+    temp <- temp2[temp2$ageGenderCode == ageGroupLU[i, 4], ]
+    temp[1, 1] <- ageGroupLU[i, 3]
     # print(temp[1,1])
     temp2 <- rbind(temp2, temp)
   }
@@ -337,8 +245,8 @@ for (j in reqsList) {
   # delete extraneous rows
   temp2 <-
     temp2[(
-      !temp2$ageGenderCode %in% male[, 2] &
-        !temp2$ageGenderCode %in% female[, 2] &
+      !temp2$ageGenderCode %in% ageGroupLU[, 2] &
+        !temp2$ageGenderCode %in% ageGroupLU[, 4] &
         !temp2$ageGenderCode %in% children &
         !temp2$ageGenderCode %in% c("Preg14_18", "Preg19_30", "Preg31_50") &
         !temp2$ageGenderCode %in%

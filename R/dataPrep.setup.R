@@ -108,6 +108,7 @@ nutrientFileName <- "USDA GFS IMPACT V15.xlsx"
 
 #' @param nutrientLU
 nutrientLU <- paste(NutrientData, nutrientFileName, sep = "/")
+
 metadata[(nrow(metadata) + 1), ] <-  c( nutrientLU,"nutrient lookup data for IMPACT commodities")
 
 #' @param commodityFoodGroupLookupFileName
@@ -150,6 +151,14 @@ scenarioList <-
     "SSP4_v9_130325",
     "SSP5_v9_130325"
   )
+
+#' @param SSP_DRI_ageGroupLU.file - lookup tables for SSP to DRI age and gender groups
+SSP_DRI_ageGroupLU.file <-  "SSP_DRI_ageGroupLookUp.xlsx"
+
+#' @param SSP_DRI_ageGroupLU - lookup tables for SSP to DRI age and gender groups
+SSP_DRI_ageGroupLU <- paste(NutrientData, SSP_DRI_ageGroupLU.file, sep = "/")
+metadata[(nrow(metadata) + 1), ] <-  c(SSP_DRI_ageGroupLU,"lookup tables for SSP to DRI age and gender groups")
+
 # Food Balance Sheet Information information ----
 #' @source \url{http://faostat3.fao.org/download/FB/FBS/E}
 #'
