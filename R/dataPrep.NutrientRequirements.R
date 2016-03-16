@@ -24,13 +24,12 @@
 
 source("R/dataPrep.setup.R")
 
-# source('nutrientDataLoading.R') # only run this when there is a new
+# source('dataPrep.nutrientData.R') # only run this when there is a new
 # nutrients spreadsheet; otherwise the next line is fine
 #' @param nutrients
 nutrients <- getNewestVersion("nutrients")
 
-# file name definitions are in setup.R Read in and clean up files
-# ----------------------------------------------
+# file name definitions are in setup.global.R Read in and clean up files -----
 
 # This is the list of food group codes as of June 28, 2015 beverages <-
 # c('beverages') cereals <- c('cereals') dairy <- c('dairy') eggs <-
@@ -42,8 +41,7 @@ nutrients <- getNewestVersion("nutrients")
 #' @param allFoodGroups
 allFoodGroups <- unique(nutrients$food.group.code)
 
-# Read in and set up the nutrient requirements data
-# ---------------------------------------------
+# Read in and set up the nutrient requirements data -----
 
 # getSheetNames(EARFileName)
 #' @param req.metadata

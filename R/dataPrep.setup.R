@@ -104,7 +104,7 @@ metadata[(nrow(metadata) + 1), ] <-  c(IMPACTfish,"data on fish from the IMPACT 
 
 # nutrient data ------
 #' @param nutrientFileName
-nutrientFileName <- "USDA GFS IMPACT V14.xlsx"
+nutrientFileName <- "USDA GFS IMPACT V15.xlsx"
 
 #' @param nutrientLU
 nutrientLU <- paste(NutrientData, nutrientFileName, sep = "/")
@@ -112,7 +112,7 @@ metadata[(nrow(metadata) + 1), ] <-  c( nutrientLU,"nutrient lookup data for IMP
 
 #' @param commodityFoodGroupLookupFileName
 commodityFoodGroupLookupFileName <-
-  "food commodity to food group table V1.xlsx"
+  "food commodity to food group table V2.xlsx"
 
 #' @param foodGroupLU
 foodGroupLU <- paste(NutrientData, commodityFoodGroupLookupFileName, sep = "/")
