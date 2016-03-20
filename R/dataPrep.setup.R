@@ -51,6 +51,7 @@ EARFileName <- "DRI_IOM_V2.xlsx"
 #' @param EARs
 EARs <- paste(NutrientData, EARFileName, sep = "/")
 metadata[(nrow(metadata) + 1), ] <-  c(EARs,"data on nutrient requirements")
+metadata[(nrow(metadata) + 1), ] <-  c("http://www.nal.usda.gov/fnic/DRI/DRI_Tables/recommended_intakes_individuals.pdf","Source of EARS")
 
 # IMPACT data -----
 # CSE - consumer support equivalent

@@ -20,16 +20,15 @@
 #' @description
 # Source of requirements is
 #' @source \url{http://www.nal.usda.gov/fnic/DRI/DRI_Tables/recommended_intakes_individuals.pdf}
-# ---
 
 source("R/dataPrep.setup.R")
 
-# source('dataPrep.nutrientData.R') # only run this when there is a new
+# source('dataPrep.nutrientData.R') # only run this when there is an update to the
 # nutrients spreadsheet; otherwise the next line is fine
 #' @param nutrients
 nutrients <- getNewestVersion("nutrients")
 
-# file name definitions are in setup.global.R Read in and clean up files -----
+# file name definitions are in setup.global.R or dataPrep.setup.R. Read in and clean up files -----
 
 # This is the list of food group codes as of June 28, 2015 beverages <-
 # c('beverages') cereals <- c('cereals') dairy <- c('dairy') eggs <-
@@ -57,6 +56,7 @@ req.EAR <-
     cols = 3:24,
     colNames = TRUE
   )
+reqsList <- "req.EAR"
 
 #' @param req.RDA.vits
 req.RDA.vits <-
@@ -67,6 +67,8 @@ req.RDA.vits <-
     cols = 3:17,
     colNames = TRUE
   )
+reqsList <- c(reqsList,"req.RDA.vits")
+
 #' @param req.RDA.minrls
 req.RDA.minrls <-
   read.xlsx(
@@ -76,6 +78,7 @@ req.RDA.minrls <-
     cols = 3:18,
     colNames = TRUE
   )
+reqsList <- c(reqsList,"req.RDA.minrls")
 
 #' @param req.RDA.macro
 req.RDA.macro <-
@@ -86,6 +89,7 @@ req.RDA.macro <-
     cols = 3:10,
     colNames = TRUE
   )
+reqsList <- c(reqsList,"req.RDA.macro")
 
 #' @param req.UL.vits
 req.UL.vits <-
@@ -96,6 +100,7 @@ req.UL.vits <-
     cols = 3:18,
     colNames = TRUE
   )
+reqsList <- c(reqsList,"req.UL.vits")
 
 #' @param req.UL.minrls
 req.UL.minrls <-
@@ -106,6 +111,7 @@ req.UL.minrls <-
     cols = 3:22,
     colNames = TRUE
   )
+reqsList <- c(reqsList,"req.UL.minrls")
 
 #' @param req.AMDR
 req.AMDR <-
@@ -116,6 +122,7 @@ req.AMDR <-
     cols = 3:13,
     colNames = TRUE
   )
+reqsList <- c(reqsList,"req.AMDR")
 
 # make lists of nutrients common to the food nutrient list and the
 # requirements list ---
@@ -133,6 +140,7 @@ common.UL.minrls <-
   intersect(colnames(nutrients), colnames(req.UL.minrls))
 common.AMDR <-
   intersect(colnames(nutrients), colnames(req.AMDR))  # this is empty right now
+
 # keep only the common nutrients
 req.EAR <- req.EAR[, c("ageGenderCode", common.EAR)]
 req.RDA.vits <- req.RDA.vits[, c("ageGenderCode", common.RDA.vits)]
@@ -258,23 +266,20 @@ for (j in reqsList) {
   nutlistname <- paste(j, ".nutlist", sep = "")
   nutlist <- colnames(temp2[, 2:length(temp2)])
   assign(nutlistname, nutlist)
+  inName <- newDFname
+  outName <- newDFname
+  cleanup(inName,outName)
 }
 
 remove(
   "temp",
   "temp2",
-  "male",
-  "male.dri",
-  "male.ssp",
   "children",
   "chldrn.male",
   "chldrn.male.SSP",
-  "female",
   "chldrn.female.SSP",
   "preg.potent",
   "preg",
-  "female.dri",
-  "female.ssp",
   "lact",
   "req.EAR.nutlist",
   "req.RDA.macro.nutlist",
@@ -282,7 +287,6 @@ remove(
   "req.RDA.minrls.nutlist",
   "req.RDA.vits.nutlist",
   "req.UL.vits.nutlist",
-  "newDFname",
   "nutlistname"
 )
 

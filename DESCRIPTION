@@ -43,7 +43,6 @@ LazyData: true
 Imports: 
 data.table, 
 ggplot2, 
-roxygen2, 
 plotrix, 
 plyr, 
 dplyr, 

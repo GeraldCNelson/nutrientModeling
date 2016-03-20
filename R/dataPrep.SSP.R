@@ -80,42 +80,21 @@ saveRDS(dt.SSP.GDP.melt,
 #' @param dt.SSP.pop - data table with the SSP results from the model identified in modelListPop
 dt.SSP.pop <- dt.SSP[model == modelListPop, ]
 # Create population age and gender data set by removing rows with education breakdown -----
-#' @param popList - variable name for population
-popList <- "Population"
+#' #' @param popList - variable name for population
+#' popList <- "Population"
 
 #' @param ageList - variable name for age group categories
-ageList <-
-  c(
-    "Aged0-4",
-    "Aged5-9",
-    "Aged10-14",
-    "Aged15-19",
-    "Aged20-24",
-    "Aged25-29",
-    "Aged30-34",
-    "Aged35-39",
-    "Aged40-44",
-    "Aged45-49",
-    "Aged50-54",
-    "Aged55-59",
-    "Aged60-64",
-    "Aged65-69",
-    "Aged70-74",
-    "Aged75-79",
-    "Aged80-84",
-    "Aged85-89",
-    "Aged90-94",
-    "Aged95-99",
-    "Aged100+"
-  )
+# ageList <-
+#   c(
+#     "Aged0-4", "Aged5-9", "Aged10-14",  "Aged15-19", "Aged20-24", "Aged25-29", "Aged30-34",
+#     "Aged35-39", "Aged40-44", "Aged45-49", "Aged50-54",  "Aged55-59",  "Aged60-64", "Aged65-69",
+#     "Aged70-74","Aged75-79","Aged80-84","Aged85-89", "Aged90-94", "Aged95-99","Aged100+"
+#   )
 
-#' @param edList - variable name for education categories
-edList <-
-  c("No Education",
-    "Primary Education",
-    "Secondary Education",
-    "Tertiary Education")
-genderList <- c("Male", "Female")
+#' #' @param edList - variable name for education categories
+#' edList <-
+#'   c("No Education", "Primary Education", "Secondary Education","Tertiary Education")
+#' genderList <- c("Male", "Female")
 
 #keep full population count around for bug checking later
 dt.SSP.pop.tot <-
